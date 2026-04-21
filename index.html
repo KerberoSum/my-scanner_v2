@@ -1,14 +1,12 @@
-from IPython.display import display, HTML
-
-html_code = """<!DOCTYPE html>
-<html lang=\"en\">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta charset=\"UTF-8\">
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Multi-Function Warehouse Hub</title>
-    <script src=\"https://unpkg.com/html5-qrcode\"></script>
-    <script src=\"https://unpkg.com/lucide@latest\"></script>
-    <script src=\"https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js\"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary: #2563eb; --success: #10b981; --danger: #ef4444;
@@ -61,35 +59,35 @@ html_code = """<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <div id=\"landing-page\" class=\"page active\">
-        <h2 style=\"margin-bottom: 24px;\">Warehouse Hub</h2>
-        <div class=\"menu-grid\">
-            <div class=\"menu-card\" onclick=\"navigateTo('scanner-page')\"><i data-lucide=\"scan-barcode\"></i><span>Scanner</span></div>
-            <div class=\"menu-card\" onclick=\"alert('Coming soon')\"><i data-lucide=\"boxes\"></i><span>Inventory</span></div>
-            <div class=\"menu-card\" onclick=\"alert('Coming soon')\"><i data-lucide=\"bar-chart-3\"></i><span>Reports</span></div>
-            <div class=\"menu-card\" onclick=\"alert('Coming soon')\"><i data-lucide=\"settings\"></i><span>Settings</span></div>
+    <div id="landing-page" class="page active">
+        <h2 style="margin-bottom: 24px;">Warehouse Hub</h2>
+        <div class="menu-grid">
+            <div class="menu-card" onclick="navigateTo('scanner-page')"><i data-lucide="scan-barcode"></i><span>Scanner</span></div>
+            <div class="menu-card" onclick="alert('Coming soon')"><i data-lucide="boxes"></i><span>Inventory</span></div>
+            <div class="menu-card" onclick="alert('Coming soon')"><i data-lucide="bar-chart-3"></i><span>Reports</span></div>
+            <div class="menu-card" onclick="alert('Coming soon')"><i data-lucide="settings"></i><span>Settings</span></div>
         </div>
     </div>
-    <div id=\"scanner-page\" class=\"page\">
-        <div id=\"scanner-container\"><div id=\"reader\"></div><div class=\"viewfinder-box\"></div></div>
-        <div id=\"history-container\">
-            <div class=\"nav-header\">
-                <button class=\"btn-back\" onclick=\"navigateTo('landing-page')\"><i data-lucide=\"chevron-left\"></i></button>
-                <h3 style=\"margin:0; font-size: 1.1rem;\">Scanner</h3>
+    <div id="scanner-page" class="page">
+        <div id="scanner-container"><div id="reader"></div><div class="viewfinder-box"></div></div>
+        <div id="history-container">
+            <div class="nav-header">
+                <button class="btn-back" onclick="navigateTo('landing-page')"><i data-lucide="chevron-left"></i></button>
+                <h3 style="margin:0; font-size: 1.1rem;">Scanner</h3>
             </div>
-            <div class=\"action-grid\">
-                <button id=\"toggle-btn\" onclick=\"toggleCamera()\" class=\"btn btn-primary\"><i data-lucide=\"camera\"></i><span id=\"toggle-text\">Start</span></button>
-                <button onclick=\"document.getElementById('excel-input').click()\" class=\"btn btn-outline\"><i data-lucide=\"file-up\"></i> Import</button>
-                <input type=\"file\" id=\"excel-input\" accept=\".xlsx, .xls\" style=\"display:none\" onchange=\"handleImport(event)\">
-                <button onclick=\"alert('Exported')\" class=\"btn btn-outline\"><i data-lucide=\"download\"></i> Export</button>
-                <button onclick=\"scanHistory=[];renderList();\" class=\"btn btn-outline\" style=\"color:var(--danger)\"><i data-lucide=\"trash-2\"></i> Clear</button>
+            <div class="action-grid">
+                <button id="toggle-btn" onclick="toggleCamera()" class="btn btn-primary"><i data-lucide="camera"></i><span id="toggle-text">Start</span></button>
+                <button onclick="document.getElementById('excel-input').click()" class="btn btn-outline"><i data-lucide="file-up"></i> Import</button>
+                <input type="file" id="excel-input" accept=".xlsx, .xls" style="display:none" onchange="handleImport(event)">
+                <button onclick="alert('Exported')" class="btn btn-outline"><i data-lucide="download"></i> Export</button>
+                <button onclick="scanHistory=[];renderList();" class="btn btn-outline" style="color:var(--danger)"><i data-lucide="trash-2"></i> Clear</button>
             </div>
-            <div id=\"scans-list\" class=\"history-list\"></div>
+            <div id="scans-list" class="history-list"></div>
         </div>
     </div>
     <script>
         let masterDatabase = new Map(); let scanHistory = []; let isScanning = false; let lastScanTime = 0;
-        const html5QrCode = new Html5Qrcode(\"reader\");
+        const html5QrCode = new Html5Qrcode("reader");
         async function navigateTo(pId) {
             if (isScanning) await toggleCamera();
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -101,11 +99,11 @@ html_code = """<!DOCTYPE html>
             const txt = document.getElementById('toggle-text');
             if (!isScanning) {
                 try {
-                    await html5QrCode.start({ facingMode: \"environment\" }, { fps: 30, qrbox: { width: 260, height: 100 } }, onScanSuccess);
-                    isScanning = true; btn.style.background = \"var(--dark)\"; txt.innerText = \"Stop\";
-                } catch (err) { alert(\"Camera Error\"); }
+                    await html5QrCode.start({ facingMode: "environment" }, { fps: 30, qrbox: { width: 260, height: 100 } }, onScanSuccess);
+                    isScanning = true; btn.style.background = "var(--dark)"; txt.innerText = "Stop";
+                } catch (err) { alert("Camera Error"); }
             } else {
-                await html5QrCode.stop(); isScanning = false; btn.style.background = \"var(--primary)\"; txt.innerText = \"Start\";
+                await html5QrCode.stop(); isScanning = false; btn.style.background = "var(--primary)"; txt.innerText = "Start";
             }
         }
         function onScanSuccess(t) {
@@ -116,7 +114,7 @@ html_code = """<!DOCTYPE html>
         }
         function renderList() {
             const list = document.getElementById('scans-list');
-            list.innerHTML = scanHistory.map(i => `<div class=\"scan-item\"><b>${i.code}</b><br><small>${i.time}</small></div>`).join('');
+            list.innerHTML = scanHistory.map(i => `<div class="scan-item"><b>${i.code}</b><br><small>${i.time}</small></div>`).join('');
         }
         function handleImport(e) {
             const file = e.target.files[0];
@@ -125,12 +123,11 @@ html_code = """<!DOCTYPE html>
                 const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
                 const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
                 rows.forEach(r => { if(r[0]) masterDatabase.set(String(r[0]), {status: r[1]}); });
-                alert(\"Database Loaded\");
+                alert("Database Loaded");
             };
             reader.readAsArrayBuffer(file);
         }
         lucide.createIcons();
     </script>
 </body>
-</html>"""
-display(HTML(html_code))
+</html>
