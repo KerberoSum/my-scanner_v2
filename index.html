@@ -1,15 +1,14 @@
 from IPython.display import display, HTML
 
-html_code = """
-<!DOCTYPE html>
-<html lang="en">
+html_code = """<!DOCTYPE html>
+<html lang=\"en\">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">
     <title>Multi-Function Warehouse Hub</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src=\"https://unpkg.com/html5-qrcode\"></script>
+    <script src=\"https://unpkg.com/lucide@latest\"></script>
+    <script src=\"https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js\"></script>
     <style>
         :root {
             --primary: #2563eb; --success: #10b981; --danger: #ef4444;
@@ -25,7 +24,7 @@ html_code = """
         .page.active { display: flex; }
         #landing-page {
             justify-content: center; align-items: center; padding: 24px;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            background: white;
         }
         .menu-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 400px;
@@ -33,85 +32,68 @@ html_code = """
         .menu-card {
             background: white; padding: 24px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer;
-            transition: transform 0.2s; border: 1px solid #e2e8f0;
+            border: 1px solid #e2e8f0;
         }
-        .menu-card:active { transform: scale(0.95); }
-        .menu-card i { color: var(--primary); }
-        .menu-card span { font-weight: 600; font-size: 0.9rem; color: var(--dark); }
-        #scanner-container { position: relative; height: 35vh; background: #000; display: flex; align-items: center; justify-content: center; }
+        #scanner-container { position: relative; height: 35vh; background: #000; overflow: hidden; }
         #reader { width: 100% !important; height: 100% !important; }
+        #reader video { object-fit: cover !important; }
         .viewfinder-box {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 280px; height: 100px; border-radius: 12px; z-index: 20;
-            pointer-events: none; box-shadow: 0 0 0 1000px rgba(0,0,0,0.5);
-        }
-        .viewfinder-box::after {
-            content: ''; position: absolute; inset: -2px; border: 3px solid var(--primary); border-radius: 12px;
-            clip-path: polygon(0 0, 15% 0, 15% 5%, 85% 5%, 85% 0, 100% 0, 100% 25%, 95% 25%, 95% 75%, 100% 75%, 100% 100%, 85% 100%, 85% 95%, 15% 95%, 15% 100%, 0 100%, 0 75%, 5% 75%, 5% 25%, 0 25%);
+            width: 260px; height: 100px; border-radius: 12px; z-index: 20;
+            pointer-events: none; box-shadow: 0 0 0 1000px rgba(0,0,0,0.4);
+            border: 2px solid rgba(255,255,255,0.2);
         }
         #history-container {
             height: 65vh; background: white; border-top-left-radius: 24px; border-top-right-radius: 24px;
-            padding: 16px; display: flex; flex-direction: column; box-shadow: 0 -10px 25px rgba(0,0,0,0.1);
+            padding: 16px; display: flex; flex-direction: column; z-index: 100; margin-top: -20px;
         }
-        .nav-header { display: flex; align-items: center; margin-bottom: 16px; gap: 12px; }
-        .btn-back { background: #f1f5f9; border: none; padding: 8px; border-radius: 50%; cursor: pointer; }
-        .stats-bar { display: flex; justify-content: space-between; padding: 10px; border-radius: 12px; margin-bottom: 12px; background: #f8fafc; font-size: 0.8rem; }
+        .nav-header { display: flex; align-items: center; margin-bottom: 12px; gap: 12px; }
+        .btn-back { background: #f1f5f9; border: none; padding: 8px; border-radius: 50%; cursor: pointer; display: flex; }
         .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
         .btn {
-            border: none; border-radius: 10px; padding: 10px 4px; font-size: 0.75rem; font-weight: 700; 
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            border: none; border-radius: 10px; padding: 10px 4px; font-size: 0.7rem; font-weight: 700; 
+            display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
         }
         .btn-primary { background: var(--primary); color: white; }
         .btn-outline { background: white; border: 1px solid #e2e8f0; }
         .history-list { flex-grow: 1; overflow-y: auto; }
-        .scan-item { display: flex; justify-content: space-between; padding: 12px; background: #f8fafc; border-radius: 12px; margin-bottom: 8px; border-left: 5px solid #cbd5e1; }
-        #flash { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 100; }
-        .flash-active { animation: flash-anim 0.1s ease-out; }
-        @keyframes flash-anim { 0% { opacity: 0.5; } 100% { opacity: 0; } }
+        .scan-item { padding: 10px; background: #f8fafc; border-radius: 10px; margin-bottom: 6px; border-left: 4px solid var(--primary); }
     </style>
 </head>
 <body>
-    <div id="landing-page" class="page active">
-        <h2 style="margin-bottom: 30px; color: var(--dark);">Select Function</h2>
-        <div class="menu-grid">
-            <div class="menu-card" onclick="navigateTo('scanner-page')">
-                <i data-lucide="scan-barcode" style="width:32px; height:32px;"></i>
-                <span>Scanner</span>
-            </div>
-            <div class="menu-card" onclick="alert('Inventory coming soon!')"><i data-lucide="boxes"></i><span>Inventory</span></div>
-            <div class="menu-card" onclick="alert('Reports coming soon!')"><i data-lucide="bar-chart-3"></i><span>Reports</span></div>
-            <div class="menu-card" onclick="alert('Settings coming soon!')"><i data-lucide="settings"></i><span>Settings</span></div>
+    <div id=\"landing-page\" class=\"page active\">
+        <h2 style=\"margin-bottom: 24px;\">Warehouse Hub</h2>
+        <div class=\"menu-grid\">
+            <div class=\"menu-card\" onclick=\"navigateTo('scanner-page')\"><i data-lucide=\"scan-barcode\"></i><span>Scanner</span></div>
+            <div class=\"menu-card\" onclick=\"alert('Coming soon')\"><i data-lucide=\"boxes\"></i><span>Inventory</span></div>
+            <div class=\"menu-card\" onclick=\"alert('Coming soon')\"><i data-lucide=\"bar-chart-3\"></i><span>Reports</span></div>
+            <div class=\"menu-card\" onclick=\"alert('Coming soon')\"><i data-lucide=\"settings\"></i><span>Settings</span></div>
         </div>
     </div>
-    <div id="scanner-page" class="page">
-        <div id="scanner-container">
-            <div id="reader"></div>
-            <div class="viewfinder-box"></div>
-            <div id="flash"></div>
-        </div>
-        <div id="history-container">
-            <div class="nav-header">
-                <button class="btn-back" onclick="navigateTo('landing-page')"><i data-lucide="chevron-left"></i></button>
-                <h3 style="margin:0;">Barcode Validator</h3>
+    <div id=\"scanner-page\" class=\"page\">
+        <div id=\"scanner-container\"><div id=\"reader\"></div><div class=\"viewfinder-box\"></div></div>
+        <div id=\"history-container\">
+            <div class=\"nav-header\">
+                <button class=\"btn-back\" onclick=\"navigateTo('landing-page')\"><i data-lucide=\"chevron-left\"></i></button>
+                <h3 style=\"margin:0; font-size: 1.1rem;\">Scanner</h3>
             </div>
-            <div class="stats-bar"><span>DB: <b id="db-count">0</b></span><span>Scans: <b id="total-count">0</b></span></div>
-            <div class="action-grid">
-                <button id="toggle-btn" onclick="toggleCamera()" class="btn btn-primary"><i data-lucide="camera"></i><span id="toggle-text">Start</span></button>
-                <button onclick="document.getElementById('excel-input').click()" class="btn btn-outline"><i data-lucide="file-up"></i> Import</button>
-                <input type="file" id="excel-input" accept=".xlsx, .xls" style="display:none" onchange="handleImport(event)">
-                <button onclick="alert('Export clicked')" class="btn btn-outline"><i data-lucide="download"></i> Export</button>
-                <button onclick="scanHistory=[];renderList();" class="btn btn-outline" style="color:var(--danger)"><i data-lucide="trash-2"></i> Clear</button>
+            <div class=\"action-grid\">
+                <button id=\"toggle-btn\" onclick=\"toggleCamera()\" class=\"btn btn-primary\"><i data-lucide=\"camera\"></i><span id=\"toggle-text\">Start</span></button>
+                <button onclick=\"document.getElementById('excel-input').click()\" class=\"btn btn-outline\"><i data-lucide=\"file-up\"></i> Import</button>
+                <input type=\"file\" id=\"excel-input\" accept=\".xlsx, .xls\" style=\"display:none\" onchange=\"handleImport(event)\">
+                <button onclick=\"alert('Exported')\" class=\"btn btn-outline\"><i data-lucide=\"download\"></i> Export</button>
+                <button onclick=\"scanHistory=[];renderList();\" class=\"btn btn-outline\" style=\"color:var(--danger)\"><i data-lucide=\"trash-2\"></i> Clear</button>
             </div>
-            <div id="scans-list" class="history-list"></div>
+            <div id=\"scans-list\" class=\"history-list\"></div>
         </div>
     </div>
     <script>
         let masterDatabase = new Map(); let scanHistory = []; let isScanning = false; let lastScanTime = 0;
-        const html5QrCode = new Html5Qrcode("reader");
-        function navigateTo(pId) {
+        const html5QrCode = new Html5Qrcode(\"reader\");
+        async function navigateTo(pId) {
+            if (isScanning) await toggleCamera();
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(pId).classList.add('active');
-            if (pId !== 'scanner-page' && isScanning) toggleCamera();
             lucide.createIcons();
         }
         async function toggleCamera() {
@@ -119,26 +101,22 @@ html_code = """
             const txt = document.getElementById('toggle-text');
             if (!isScanning) {
                 try {
-                    await html5QrCode.start({ facingMode: "environment" }, { fps: 30, qrbox: { width: 280, height: 100 } }, onScanSuccess);
-                    isScanning = true; btn.style.background = "var(--dark)"; txt.innerText = "Stop";
-                } catch (err) { alert(err); }
+                    await html5QrCode.start({ facingMode: \"environment\" }, { fps: 30, qrbox: { width: 260, height: 100 } }, onScanSuccess);
+                    isScanning = true; btn.style.background = \"var(--dark)\"; txt.innerText = \"Stop\";
+                } catch (err) { alert(\"Camera Error\"); }
             } else {
-                await html5QrCode.stop(); isScanning = false; btn.style.background = "var(--primary)"; txt.innerText = "Start";
+                await html5QrCode.stop(); isScanning = false; btn.style.background = \"var(--primary)\"; txt.innerText = \"Start\";
             }
         }
         function onScanSuccess(t) {
-            if (Date.now() - lastScanTime < 800) return;
+            if (Date.now() - lastScanTime < 1000) return;
             lastScanTime = Date.now();
-            document.getElementById('flash').classList.add('flash-active');
-            setTimeout(() => document.getElementById('flash').classList.remove('flash-active'), 100);
-            const data = masterDatabase.get(t) || { status: "Unknown" };
-            scanHistory.unshift({ code: t, status: data.status, time: new Date().toLocaleTimeString() });
+            scanHistory.unshift({ code: t, time: new Date().toLocaleTimeString() });
             renderList();
         }
         function renderList() {
             const list = document.getElementById('scans-list');
-            document.getElementById('total-count').innerText = scanHistory.length;
-            list.innerHTML = scanHistory.map(i => `<div class="scan-item"><b>${i.code}</b><br><small>${i.status} - ${i.time}</small></div>`).join('');
+            list.innerHTML = scanHistory.map(i => `<div class=\"scan-item\"><b>${i.code}</b><br><small>${i.time}</small></div>`).join('');
         }
         function handleImport(e) {
             const file = e.target.files[0];
@@ -147,13 +125,12 @@ html_code = """
                 const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
                 const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
                 rows.forEach(r => { if(r[0]) masterDatabase.set(String(r[0]), {status: r[1]}); });
-                document.getElementById('db-count').innerText = masterDatabase.size;
+                alert(\"Database Loaded\");
             };
             reader.readAsArrayBuffer(file);
         }
         lucide.createIcons();
     </script>
 </body>
-</html>
-"""
+</html>"""
 display(HTML(html_code))
