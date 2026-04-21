@@ -1,10 +1,12 @@
+from IPython.display import display, HTML
+
+html_code = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Multi-Function Warehouse Hub</title>
-    <!-- Libraries -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -13,20 +15,14 @@
             --primary: #2563eb; --success: #10b981; --danger: #ef4444;
             --warning: #f59e0b; --bg: #f1f5f9; --dark: #0f172a;
         }
-
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
         body {
             font-family: -apple-system, system-ui, sans-serif;
             margin: 0; padding: 0; background-color: var(--bg);
             height: 100vh; width: 100vw; overflow: hidden;
         }
-
-        /* Page Management */
         .page { display: none; height: 100vh; width: 100vw; flex-direction: column; }
         .page.active { display: flex; }
-
-        /* Landing Page Styles */
         #landing-page {
             justify-content: center; align-items: center; padding: 24px;
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
@@ -42,12 +38,8 @@
         .menu-card:active { transform: scale(0.95); }
         .menu-card i { color: var(--primary); }
         .menu-card span { font-weight: 600; font-size: 0.9rem; color: var(--dark); }
-
-        /* Scanner Page Styles */
         #scanner-container { position: relative; height: 35vh; background: #000; display: flex; align-items: center; justify-content: center; }
         #reader { width: 100% !important; height: 100% !important; }
-        #reader video { object-fit: cover; }
-        
         .viewfinder-box {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 280px; height: 100px; border-radius: 12px; z-index: 20;
@@ -57,36 +49,28 @@
             content: ''; position: absolute; inset: -2px; border: 3px solid var(--primary); border-radius: 12px;
             clip-path: polygon(0 0, 15% 0, 15% 5%, 85% 5%, 85% 0, 100% 0, 100% 25%, 95% 25%, 95% 75%, 100% 75%, 100% 100%, 85% 100%, 85% 95%, 15% 95%, 15% 100%, 0 100%, 0 75%, 5% 75%, 5% 25%, 0 25%);
         }
-
         #history-container {
             height: 65vh; background: white; border-top-left-radius: 24px; border-top-right-radius: 24px;
             padding: 16px; display: flex; flex-direction: column; box-shadow: 0 -10px 25px rgba(0,0,0,0.1);
         }
-
         .nav-header { display: flex; align-items: center; margin-bottom: 16px; gap: 12px; }
         .btn-back { background: #f1f5f9; border: none; padding: 8px; border-radius: 50%; cursor: pointer; }
-
         .stats-bar { display: flex; justify-content: space-between; padding: 10px; border-radius: 12px; margin-bottom: 12px; background: #f8fafc; font-size: 0.8rem; }
         .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
-        
         .btn {
             border: none; border-radius: 10px; padding: 10px 4px; font-size: 0.75rem; font-weight: 700; 
             display: flex; flex-direction: column; align-items: center; gap: 4px;
         }
         .btn-primary { background: var(--primary); color: white; }
         .btn-outline { background: white; border: 1px solid #e2e8f0; }
-
         .history-list { flex-grow: 1; overflow-y: auto; }
         .scan-item { display: flex; justify-content: space-between; padding: 12px; background: #f8fafc; border-radius: 12px; margin-bottom: 8px; border-left: 5px solid #cbd5e1; }
-        
         #flash { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 100; }
         .flash-active { animation: flash-anim 0.1s ease-out; }
         @keyframes flash-anim { 0% { opacity: 0.5; } 100% { opacity: 0; } }
     </style>
 </head>
 <body>
-
-    <!-- Landing Page -->
     <div id="landing-page" class="page active">
         <h2 style="margin-bottom: 30px; color: var(--dark);">Select Function</h2>
         <div class="menu-grid">
@@ -94,157 +78,82 @@
                 <i data-lucide="scan-barcode" style="width:32px; height:32px;"></i>
                 <span>Scanner</span>
             </div>
-            <div class="menu-card" onclick="alert('Inventory function coming soon!')">
-                <i data-lucide="boxes" style="width:32px; height:32px;"></i>
-                <span>Inventory</span>
-            </div>
-            <div class="menu-card" onclick="alert('Reports function coming soon!')">
-                <i data-lucide="bar-chart-3" style="width:32px; height:32px;"></i>
-                <span>Reports</span>
-            </div>
-            <div class="menu-card" onclick="alert('Settings function coming soon!')">
-                <i data-lucide="settings" style="width:32px; height:32px;"></i>
-                <span>Settings</span>
-            </div>
+            <div class="menu-card" onclick="alert('Inventory coming soon!')"><i data-lucide="boxes"></i><span>Inventory</span></div>
+            <div class="menu-card" onclick="alert('Reports coming soon!')"><i data-lucide="bar-chart-3"></i><span>Reports</span></div>
+            <div class="menu-card" onclick="alert('Settings coming soon!')"><i data-lucide="settings"></i><span>Settings</span></div>
         </div>
     </div>
-
-    <!-- Scanner Page -->
     <div id="scanner-page" class="page">
         <div id="scanner-container">
             <div id="reader"></div>
             <div class="viewfinder-box"></div>
             <div id="flash"></div>
         </div>
-
         <div id="history-container">
             <div class="nav-header">
                 <button class="btn-back" onclick="navigateTo('landing-page')"><i data-lucide="chevron-left"></i></button>
                 <h3 style="margin:0;">Barcode Validator</h3>
             </div>
-
-            <div class="stats-bar">
-                <span>DB: <b id="db-count">0</b></span>
-                <span>Scans: <b id="total-count">0</b></span>
-            </div>
-
+            <div class="stats-bar"><span>DB: <b id="db-count">0</b></span><span>Scans: <b id="total-count">0</b></span></div>
             <div class="action-grid">
-                <button id="toggle-btn" onclick="toggleCamera()" class="btn btn-primary">
-                    <i data-lucide="camera"></i> <span id="toggle-text">Start</span>
-                </button>
-                <button onclick="document.getElementById('excel-input').click()" class="btn btn-outline">
-                    <i data-lucide="file-up"></i> Import
-                </button>
+                <button id="toggle-btn" onclick="toggleCamera()" class="btn btn-primary"><i data-lucide="camera"></i><span id="toggle-text">Start</span></button>
+                <button onclick="document.getElementById('excel-input').click()" class="btn btn-outline"><i data-lucide="file-up"></i> Import</button>
                 <input type="file" id="excel-input" accept=".xlsx, .xls" style="display:none" onchange="handleImport(event)">
-                <button onclick="exportToCSV()" class="btn btn-outline">
-                    <i data-lucide="download"></i> Export
-                </button>
-                <button onclick="handleClearAll()" class="btn btn-outline" style="color:var(--danger)">
-                    <i data-lucide="trash-2"></i> Clear
-                </button>
+                <button onclick="alert('Export clicked')" class="btn btn-outline"><i data-lucide="download"></i> Export</button>
+                <button onclick="scanHistory=[];renderList();" class="btn btn-outline" style="color:var(--danger)"><i data-lucide="trash-2"></i> Clear</button>
             </div>
-
             <div id="scans-list" class="history-list"></div>
         </div>
     </div>
-
     <script>
-        let masterDatabase = new Map();
-        let scanHistory = [];
-        let isScanning = false;
-        let lastScanTime = 0;
+        let masterDatabase = new Map(); let scanHistory = []; let isScanning = false; let lastScanTime = 0;
         const html5QrCode = new Html5Qrcode("reader");
-
-        function navigateTo(pageId) {
+        function navigateTo(pId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
-            if (pageId !== 'scanner-page' && isScanning) toggleCamera();
+            document.getElementById(pId).classList.add('active');
+            if (pId !== 'scanner-page' && isScanning) toggleCamera();
             lucide.createIcons();
         }
-
         async function toggleCamera() {
             const btn = document.getElementById('toggle-btn');
-            const text = document.getElementById('toggle-text');
-
+            const txt = document.getElementById('toggle-text');
             if (!isScanning) {
                 try {
-                    // PERFORMANCE IMPROVEMENT: Higher FPS and targeted QRBox aspect ratio
-                    await html5QrCode.start(
-                        { facingMode: "environment" },
-                        {
-                            fps: 30, // Increased for snappier detection
-                            qrbox: { width: 280, height: 100 }, // Shaped for standard barcodes
-                            aspectRatio: 1.0,
-                            disableFlip: true
-                        },
-                        onScanSuccess
-                    );
-                    isScanning = true;
-                    btn.style.background = "var(--dark)";
-                    text.innerText = "Stop";
-                } catch (err) { alert("Camera error: " + err); }
+                    await html5QrCode.start({ facingMode: "environment" }, { fps: 30, qrbox: { width: 280, height: 100 } }, onScanSuccess);
+                    isScanning = true; btn.style.background = "var(--dark)"; txt.innerText = "Stop";
+                } catch (err) { alert(err); }
             } else {
-                await html5QrCode.stop();
-                isScanning = false;
-                btn.style.background = "var(--primary)";
-                text.innerText = "Start";
+                await html5QrCode.stop(); isScanning = false; btn.style.background = "var(--primary)"; txt.innerText = "Start";
             }
         }
-
-        function onScanSuccess(decodedText) {
-            const now = Date.now();
-            if (now - lastScanTime < 800) return; // Debounce
-            lastScanTime = now;
-
+        function onScanSuccess(t) {
+            if (Date.now() - lastScanTime < 800) return;
+            lastScanTime = Date.now();
             document.getElementById('flash').classList.add('flash-active');
             setTimeout(() => document.getElementById('flash').classList.remove('flash-active'), 100);
-            
-            if (navigator.vibrate) navigator.vibrate(40);
-            processBarcode(decodedText);
-        }
-
-        function processBarcode(code) {
-            const data = masterDatabase.get(code) || { status: "Unknown", info1: "Not Found" };
-            scanHistory.unshift({
-                code, status: data.status, 
-                time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})
-            });
+            const data = masterDatabase.get(t) || { status: "Unknown" };
+            scanHistory.unshift({ code: t, status: data.status, time: new Date().toLocaleTimeString() });
             renderList();
         }
-
         function renderList() {
             const list = document.getElementById('scans-list');
             document.getElementById('total-count').innerText = scanHistory.length;
-            list.innerHTML = scanHistory.map(item => `
-                <div class="scan-item" style="border-left-color: ${getStatusColor(item.status)}">
-                    <div>
-                        <div style="font-family:monospace; font-weight:bold;">${item.code}</div>
-                        <div style="font-size:0.7rem; color:#64748b;">${item.status} • ${item.time}</div>
-                    </div>
-                </div>
-            `).join('');
+            list.innerHTML = scanHistory.map(i => `<div class="scan-item"><b>${i.code}</b><br><small>${i.status} - ${i.time}</small></div>`).join('');
         }
-
-        function getStatusColor(s) {
-            if (s === 'Approved') return 'var(--success)';
-            if (s === 'Not Approved') return 'var(--danger)';
-            return '#cbd5e1';
-        }
-
-        function handleImport(event) {
-            const file = event.target.files[0];
+        function handleImport(e) {
+            const file = e.target.files[0];
             const reader = new FileReader();
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const wb = XLSX.read(data, {type:'array'});
+            reader.onload = (ev) => {
+                const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
                 const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
                 rows.forEach(r => { if(r[0]) masterDatabase.set(String(r[0]), {status: r[1]}); });
                 document.getElementById('db-count').innerText = masterDatabase.size;
             };
             reader.readAsArrayBuffer(file);
         }
-
         lucide.createIcons();
     </script>
 </body>
 </html>
+"""
+display(HTML(html_code))
