@@ -193,6 +193,216 @@
         </div>
     </div>
 
+    <!-- 頁面 3: 庫存盤點模式 (新增) -->
+    <div id="page-inventory" class="page">
+        <div class="back-bar" onclick="stopEverythingAndGoHome()">
+            <i data-lucide="chevron-left"></i> 返回主選單
+        </div>
+    
+        <!-- 掃描區 (共用) -->
+        <div id="inv-scanner-container" style="position: relative; height: 30vh; background: #000;">
+            <div id="inv-reader"></div>
+            <div class="viewfinder-box"><div class="scan-line"></div></div>
+            <div id="inv-flash" style="position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 100;"></div>
+        </div>
+    
+        <div id="history-container">
+            <!-- 狀態指示器 -->
+            <div id="inv-status-header" style="background: var(--dark); color: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; text-align: center;">
+                <div id="step-label" style="font-size: 0.8rem; opacity: 0.8;">STEP 1</div>
+                <div id="current-task" style="font-size: 1.1rem; font-weight: bold;">請掃描儲位條碼 (Location)</div>
+            </div>
+    
+            <div class="action-grid">
+                <button id="inv-toggle-btn" onclick="toggleInvCamera()" class="btn btn-primary">
+                    <i data-lucide="camera"></i> <span id="inv-toggle-text">Start</span>
+                </button>
+                <button onclick="document.getElementById('inv-excel-input').click()" class="btn btn-success-outline">
+                    <i data-lucide="file-up"></i> Import DB
+                </button>
+                <input type="file" id="inv-excel-input" accept=".xlsx, .xls" onchange="handleInvImport(event)" style="display:none">
+                
+                <button id="btn-finish-loc" onclick="finishLocation()" class="btn btn-stop" style="background: var(--success); display:none;">
+                    <i data-lucide="check-circle"></i> 完成儲位
+                </button>
+                <button onclick="exportInvCSV()" class="btn btn-outline">
+                    <i data-lucide="download"></i> Export CSV
+                </button>
+            </div>
+    
+            <!-- 目前儲位資訊 -->
+            <div id="current-location-info" style="display:none; background: #e0f2fe; padding: 8px 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #bae6fd;">
+                <span style="font-size: 0.8rem; color: #0369a1;">目前儲位: </span>
+                <strong id="display-loc-name">---</strong>
+            </div>
+    
+            <div id="inv-scans-list" class="history-list">
+                 <!-- 顯示當前儲位已掃描的貨品 -->
+            </div>
+        </div>
+    </div>
+
+<script>
+    // === 庫存盤點邏輯變數 ===
+    let invDatabase = []; // 儲存 Excel 資料
+    let currentLoc = ""; // 目前儲位名稱
+    let currentLocBarcodes = []; // 目前儲位掃到的貨品
+    let finalInvRecords = []; // 最終要導出的 CSV 紀錄
+    let invScanning = false;
+    let isWaitingForLocation = true; // 是否正在等待掃描儲位
+    const invQrCode = new Html5Qrcode("inv-reader");
+
+    // 切換到盤點頁面
+    function goToInventory() {
+        switchPage('page-inventory');
+        resetInvSession();
+    }
+
+    // 重置盤點狀態
+    function resetInvSession() {
+        currentLoc = "";
+        currentLocBarcodes = [];
+        isWaitingForLocation = true;
+        updateInvUI();
+    }
+
+    // 匯入 Excel (讀取 O 欄與 B 欄)
+    function handleInvImport(event) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            // 轉為 JSON，原始格式
+            const rawData = XLSX.utils.sheet_to_json(sheet, { header: "A" }); 
+            
+            // 轉換為 Map 方便搜尋: Key 為 O 欄, Value 為 B 欄
+            // SheetJS index: A=0, B=1, ..., O=14
+            invDatabase = rawData.map(row => ({
+                barcode: String(row['O'] || '').trim(),
+                name: String(row['B'] || 'Unknown Item')
+            })).filter(item => item.barcode !== '');
+
+            alert(`資料庫匯入成功！共 ${invDatabase.size} 筆貨品資料。`);
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function toggleInvCamera() {
+        if (!invScanning) {
+            invQrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: { width: 250, height: 100 } }, onInvScanSuccess);
+            invScanning = true;
+            document.getElementById('inv-toggle-text').innerText = "Stop";
+        } else {
+            invQrCode.stop();
+            invScanning = false;
+            document.getElementById('inv-toggle-text').innerText = "Start";
+        }
+    }
+
+    function onInvScanSuccess(text) {
+        const now = Date.now();
+        if (now - lastScanTime < 1200) return;
+        lastScanTime = now;
+
+        // 閃光與震動回饋
+        const f = document.getElementById('inv-flash');
+        f.style.opacity = "0.6"; setTimeout(() => f.style.opacity = "0", 150);
+        if (navigator.vibrate) navigator.vibrate(50);
+
+        if (isWaitingForLocation) {
+            // 步驟 1: 掃描儲位 (Textstring)
+            currentLoc = text;
+            isWaitingForLocation = false;
+            updateInvUI();
+        } else {
+            // 步驟 2: 掃描貨品 (Number)
+            const item = invDatabase.find(i => i.barcode === text.trim());
+            currentLocBarcodes.push({
+                barcode: text,
+                name: item ? item.name : "⚠ 找不到此貨品"
+            });
+            renderInvList();
+        }
+    }
+
+    function updateInvUI() {
+        const stepLabel = document.getElementById('step-label');
+        const taskLabel = document.getElementById('current-task');
+        const locInfo = document.getElementById('current-location-info');
+        const finishBtn = document.getElementById('btn-finish-loc');
+
+        if (isWaitingForLocation) {
+            stepLabel.innerText = "STEP 1";
+            taskLabel.innerText = "請掃描儲位條碼 (Location)";
+            locInfo.style.display = "none";
+            finishBtn.style.display = "none";
+        } else {
+            stepLabel.innerText = "STEP 2";
+            taskLabel.innerText = "請掃描貨品條碼 (Inventory)";
+            locInfo.style.display = "block";
+            document.getElementById('display-loc-name').innerText = currentLoc;
+            finishBtn.style.display = "flex";
+        }
+    }
+
+    function renderInvList() {
+        const list = document.getElementById('inv-scans-list');
+        list.innerHTML = currentLocBarcodes.map(item => `
+            <div class="scan-item" style="border-left-color: var(--primary)">
+                <div>
+                    <div style="font-family:monospace; font-weight:bold;">${item.barcode}</div>
+                    <div style="font-size:0.8rem; color:var(--primary);">${item.name}</div>
+                </div>
+            </div>
+        `).reverse().join('');
+    }
+
+    // 完成當前儲位，結算存入最終紀錄
+    function finishLocation() {
+        if (currentLocBarcodes.length === 0) {
+            alert("尚未掃描任何貨品！");
+            return;
+        }
+
+        const now = new Date();
+        const dateStr = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+        const allBarcodes = currentLocBarcodes.map(i => i.barcode).join('; ');
+
+        finalInvRecords.push({
+            dateTime: dateStr,
+            barcode: allBarcodes,
+            to: currentLoc
+        });
+
+        alert(`儲位 ${currentLoc} 已完成，共紀錄 ${currentLocBarcodes.length} 件貨品。`);
+        
+        // 重置進入下一個儲位
+        currentLocBarcodes = [];
+        isWaitingForLocation = true;
+        updateInvUI();
+        document.getElementById('inv-scans-list').innerHTML = "";
+    }
+
+    function exportInvCSV() {
+        if (finalInvRecords.length === 0) return alert("沒有可導出的紀錄");
+        
+        let csvContent = "\ufeffDate Time,Barcode,To\n";
+        finalInvRecords.forEach(r => {
+            csvContent += `"${r.dateTime}","${r.barcode}","${r.to}"\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", `Inventory_Report_${new Date().getTime()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+    
     <script>
         // === 框架導覽邏輯 ===
         function switchPage(pageId) {
