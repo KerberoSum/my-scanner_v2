@@ -1,132 +1,173 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Multi-Function Warehouse Hub</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>Scanner Hub Pro</title>
+    <!-- 引入原有的 Libraries -->
+    <script src="https://unpkg.com"></script>
+    <script src="https://unpkg.com"></script>
+    <script src="https://cloudflare.com"></script>
+    
     <style>
         :root {
-            --primary: #2563eb; --success: #10b981; --danger: #ef4444;
-            --warning: #f59e0b; --bg: #f1f5f9; --dark: #0f172a;
+            --primary: #2563eb;
+            --bg: #f1f5f9;
+            --dark: #0f172a;
+            --card: #ffffff;
         }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body {
+
+        body, html {
+            margin: 0; padding: 0;
             font-family: -apple-system, system-ui, sans-serif;
-            margin: 0; padding: 0; background-color: var(--bg);
-            height: 100vh; width: 100vw; overflow: hidden;
+            background-color: var(--bg);
+            height: 100vh; width: 100vw;
+            overflow: hidden;
         }
-        .page { display: none; height: 100vh; width: 100vw; flex-direction: column; }
-        .page.active { display: flex; }
-        #landing-page {
-            justify-content: center; align-items: center; padding: 24px;
-            background: white;
+
+        /* --- 導覽切換邏輯 --- */
+        .page {
+            display: none; /* 預設隱藏所有頁面 */
+            height: 100vh;
+            width: 100vw;
+            flex-direction: column;
         }
+
+        .page.active {
+            display: flex; /* 只顯示 active 頁面 */
+        }
+
+        /* --- 首頁選單樣式 --- */
+        #main-menu {
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+        }
+
         .menu-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 400px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
         }
+
         .menu-card {
-            background: white; padding: 24px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer;
-            border: 1px solid #e2e8f0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 25px 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
         }
-        #scanner-container { position: relative; height: 35vh; background: #000; overflow: hidden; }
-        #reader { width: 100% !important; height: 100% !important; }
-        #reader video { object-fit: cover !important; }
-        .viewfinder-box {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 260px; height: 100px; border-radius: 12px; z-index: 20;
-            pointer-events: none; box-shadow: 0 0 0 1000px rgba(0,0,0,0.4);
-            border: 2px solid rgba(255,255,255,0.2);
+
+        .menu-card:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.2); }
+        
+        .menu-card i { margin-bottom: 12px; color: var(--primary); }
+        .menu-card h3 { margin: 0; font-size: 0.9rem; }
+
+        /* --- 返回按鈕 --- */
+        .back-bar {
+            background: white;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            border-bottom: 1px solid #e2e8f0;
         }
-        #history-container {
-            height: 65vh; background: white; border-top-left-radius: 24px; border-top-right-radius: 24px;
-            padding: 16px; display: flex; flex-direction: column; z-index: 100; margin-top: -20px;
-        }
-        .nav-header { display: flex; align-items: center; margin-bottom: 12px; gap: 12px; }
-        .btn-back { background: #f1f5f9; border: none; padding: 8px; border-radius: 50%; cursor: pointer; display: flex; }
-        .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
-        .btn {
-            border: none; border-radius: 10px; padding: 10px 4px; font-size: 0.7rem; font-weight: 700; 
-            display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
-        }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-outline { background: white; border: 1px solid #e2e8f0; }
-        .history-list { flex-grow: 1; overflow-y: auto; }
-        .scan-item { padding: 10px; background: #f8fafc; border-radius: 10px; margin-bottom: 6px; border-left: 4px solid var(--primary); }
+
+        /* 這裡放你原本的 CSS 樣式 (省略部分重複內容以保持簡潔) */
+        /* ... 保留原本的 #scanner-container, #history-container, .btn 等樣式 ... */
     </style>
 </head>
 <body>
-    <div id="landing-page" class="page active">
-        <h2 style="margin-bottom: 24px;">Warehouse Hub</h2>
+
+    <!-- 1. 主選單頁面 -->
+    <div id="page-home" class="page active">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="margin: 0;">Scanner Hub</h1>
+            <p style="opacity: 0.6;">請選擇工作模式</p>
+        </div>
+        
         <div class="menu-grid">
-            <div class="menu-card" onclick="navigateTo('scanner-page')"><i data-lucide="scan-barcode"></i><span>Scanner</span></div>
-            <div class="menu-card" onclick="alert('Coming soon')"><i data-lucide="boxes"></i><span>Inventory</span></div>
-            <div class="menu-card" onclick="alert('Coming soon')"><i data-lucide="bar-chart-3"></i><span>Reports</span></div>
-            <div class="menu-card" onclick="alert('Coming soon')"><i data-lucide="settings"></i><span>Settings</span></div>
+            <!-- 功能 1: 妳原本的驗證功能 -->
+            <div class="menu-card" onclick="switchPage('page-validator')">
+                <i data-lucide="shield-check" style="width:40px; height:40px;"></i>
+                <h3>資料驗證模式</h3>
+            </div>
+
+            <!-- 功能 2: 預留給未來的功能 (例如：純庫存盤點) -->
+            <div class="menu-card" style="opacity: 0.5;">
+                <i data-lucide="package" style="width:40px; height:40px;"></i>
+                <h3>庫存盤點 (待加入)</h3>
+            </div>
+
+            <!-- 功能 3: 預留 -->
+            <div class="menu-card" style="opacity: 0.5;">
+                <i data-lucide="list-plus" style="width:40px; height:40px;"></i>
+                <h3>快速入庫 (待加入)</h3>
+            </div>
+
+            <!-- 設定按鈕 -->
+            <div class="menu-card" onclick="alert('設定頁面開發中')">
+                <i data-lucide="settings" style="width:40px; height:40px;"></i>
+                <h3>系統設定</h3>
+            </div>
         </div>
     </div>
-    <div id="scanner-page" class="page">
-        <div id="scanner-container"><div id="reader"></div><div class="viewfinder-box"></div></div>
-        <div id="history-container">
-            <div class="nav-header">
-                <button class="btn-back" onclick="navigateTo('landing-page')"><i data-lucide="chevron-left"></i></button>
-                <h3 style="margin:0; font-size: 1.1rem;">Scanner</h3>
+
+    <!-- 2. 原本的條碼驗證頁面 -->
+    <div id="page-validator" class="page">
+        <div class="back-bar" onclick="stopEverythingAndGoHome()">
+            <i data-lucide="chevron-left"></i> 返回主選單
+        </div>
+        
+        <!-- 這裡放入你原本 PDF 中的 HTML 結構 (如 #scanner-container, #history-container) -->
+        <div id="scanner-container">
+            <div id="reader"></div>
+            <div class="viewfinder-box"><div class="scan-line"></div></div>
+            <div id="flash"></div>
+        </div>
+
+        <div id="history-container" style="flex:1; overflow-y:auto;">
+            <!-- 原本的 stats-bar, action-grid, manual-input-group, scans-list 等 -->
+            <div class="stats-bar">
+                <span>DB: <span id="db-count" class="stat-highlight">0</span></span>
+                <span>Total: <span id="total-count" class="stat-highlight">0</span></span>
             </div>
-            <div class="action-grid">
-                <button id="toggle-btn" onclick="toggleCamera()" class="btn btn-primary"><i data-lucide="camera"></i><span id="toggle-text">Start</span></button>
-                <button onclick="document.getElementById('excel-input').click()" class="btn btn-outline"><i data-lucide="file-up"></i> Import</button>
-                <input type="file" id="excel-input" accept=".xlsx, .xls" style="display:none" onchange="handleImport(event)">
-                <button onclick="alert('Exported')" class="btn btn-outline"><i data-lucide="download"></i> Export</button>
-                <button onclick="scanHistory=[];renderList();" class="btn btn-outline" style="color:var(--danger)"><i data-lucide="trash-2"></i> Clear</button>
-            </div>
-            <div id="scans-list" class="history-list"></div>
+            <!-- ... 原本的其他按鈕與清單 ... -->
         </div>
     </div>
+
     <script>
-        let masterDatabase = new Map(); let scanHistory = []; let isScanning = false; let lastScanTime = 0;
-        const html5QrCode = new Html5Qrcode("reader");
-        async function navigateTo(pId) {
-            if (isScanning) await toggleCamera();
+        // --- 導覽邏輯 ---
+        function switchPage(pageId) {
+            // 隱藏所有頁面
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(pId).classList.add('active');
+            // 顯示目標頁面
+            document.getElementById(pageId).classList.add('active');
+            
+            // 如果進入的是驗證頁面，初始化圖示
             lucide.createIcons();
         }
-        async function toggleCamera() {
-            const btn = document.getElementById('toggle-btn');
-            const txt = document.getElementById('toggle-text');
-            if (!isScanning) {
-                try {
-                    await html5QrCode.start({ facingMode: "environment" }, { fps: 30, qrbox: { width: 260, height: 100 } }, onScanSuccess);
-                    isScanning = true; btn.style.background = "var(--dark)"; txt.innerText = "Stop";
-                } catch (err) { alert("Camera Error"); }
-            } else {
-                await html5QrCode.stop(); isScanning = false; btn.style.background = "var(--primary)"; txt.innerText = "Start";
+
+        async function stopEverythingAndGoHome() {
+            // 如果相機正在執行，先停止它
+            if (typeof isScanning !== 'undefined' && isScanning) {
+                await toggleCamera(); // 調用你原本的停止相機函式
             }
+            switchPage('page-home');
         }
-        function onScanSuccess(t) {
-            if (Date.now() - lastScanTime < 1000) return;
-            lastScanTime = Date.now();
-            scanHistory.unshift({ code: t, time: new Date().toLocaleTimeString() });
-            renderList();
-        }
-        function renderList() {
-            const list = document.getElementById('scans-list');
-            list.innerHTML = scanHistory.map(i => `<div class="scan-item"><b>${i.code}</b><br><small>${i.time}</small></div>`).join('');
-        }
-        function handleImport(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
-                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
-                rows.forEach(r => { if(r[0]) masterDatabase.set(String(r[0]), {status: r[1]}); });
-                alert("Database Loaded");
-            };
-            reader.readAsArrayBuffer(file);
-        }
+
+        // --- 這裡放入你原本 PDF 中的所有 JavaScript 邏輯 ---
+        // (handleImport, processBarcode, renderList, toggleCamera 等)
+        
+        // 初始化首頁圖示
         lucide.createIcons();
     </script>
 </body>
