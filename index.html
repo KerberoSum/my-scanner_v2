@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner Hub Pro - v3.5 Stable</title>
+    <title>Scanner Hub Pro - v3.5 Fixed</title>
     
-    <!-- Libraries -->
+    <!-- Fixed Library Links -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -15,35 +15,30 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body, html { margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); height: 100vh; width: 100vw; overflow: hidden; }
 
-        /* 頁面切換 */
         .page { display: none; height: 100vh; width: 100vw; flex-direction: column; overflow: hidden; }
         .page.active { display: flex; }
 
-        /* 首頁選單 */
         #page-home { justify-content: center; align-items: center; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; text-align: center; }
         .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; width: 100%; max-width: 400px; }
         .menu-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px 10px; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); }
         .menu-card:active { transform: scale(0.95); }
-        .menu-card i { margin-bottom: 10px; color: var(--primary); display: block; margin-left: auto; margin-right: auto; }
+        .menu-card i { margin-bottom: 10px; color: var(--primary); display: block; margin: 0 auto 10px auto; }
 
-        /* 掃描區 - 解決灰色無法掃描問題 */
         .back-bar { background: white; padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-weight: bold; border-bottom: 1px solid #e2e8f0; cursor: pointer; color: var(--dark); z-index: 100; }
-        .scanner-container { position: relative; height: 35vh; width: 100%; background: #000; overflow: hidden; }
         
-        /* 視訊視窗強制重置 */
+        /* Scanner UI Fixes */
+        .scanner-container { position: relative; height: 35vh; width: 100%; background: #000; overflow: hidden; }
         #val-reader, #inv-reader { width: 100% !important; height: 100% !important; }
-        #val-reader video, #inv-reader video { object-fit: cover !important; }
+        #val-reader video, #inv-reader video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
 
-        /* 取景框優化：使用 pointer-events: none 確保不擋住掃描感應 */
         .viewfinder-box { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-            width: 260px; height: 80px; 
-            border: 2px solid rgba(255,255,255,0.5); border-radius: 12px; 
+            width: 280px; height: 120px; 
+            border: 2px solid rgba(255,255,255,0.3); border-radius: 12px; 
             z-index: 50; pointer-events: none; 
-            /* 移除可能導致灰色的巨大 box-shadow，改用簡潔邊框 */
         }
         .viewfinder-box::after { 
-            content: ''; position: absolute; inset: -3px; 
+            content: ''; position: absolute; inset: -2px; 
             border: 4px solid var(--primary); border-radius: 12px; 
             clip-path: polygon(0 0, 20% 0, 20% 10%, 80% 10%, 80% 0, 100% 0, 100% 30%, 90% 30%, 90% 70%, 100% 70%, 100% 100%, 80% 100%, 80% 90%, 20% 90%, 20% 100%, 0 100%, 0 70%, 10% 70%, 10% 30%, 0 30%); 
         }
@@ -62,33 +57,32 @@
         .history-list { flex-grow: 1; overflow-y: auto; }
         .scan-item { display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 12px; margin-bottom: 8px; border-left: 6px solid #cbd5e1; }
         
-        .flash-overlay { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 100; }
+        .flash-overlay { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 101; }
         .flash-active { animation: flash-anim 0.2s ease-out; }
         @keyframes flash-anim { 0% { opacity: 0.7; } 100% { opacity: 0; } }
     </style>
 </head>
 <body>
 
-    <!-- 頁面 1: 首頁 -->
     <div id="page-home" class="page active">
         <h1 style="margin-bottom:5px;">Scanner Hub Pro</h1>
         <p style="opacity:0.7; margin-bottom:30px;">Professional Scanning Tools</p>
         <div class="menu-grid">
             <div class="menu-card" onclick="switchPage('page-validator')">
-                <i data-lucide="shield-check" style="width:32px; height:32px;"></i><h3>Validator</h3>
+                <i data-lucide="shield-check"></i><h3>Validator</h3>
             </div>
             <div class="menu-card" onclick="switchPage('page-inventory')">
-                <i data-lucide="package-search" style="width:32px; height:32px;"></i><h3>Inventory</h3>
+                <i data-lucide="package-search"></i><h3>Inventory</h3>
             </div>
         </div>
     </div>
 
-    <!-- 頁面 2: 驗證模式 -->
     <div id="page-validator" class="page">
         <div class="back-bar" onclick="stopAndHome('val')"><i data-lucide="chevron-left"></i> Validator Mode</div>
         <div class="scanner-container">
             <div id="val-reader"></div>
-            <div class="viewfinder-box"></div><div id="val-flash" class="flash-overlay"></div>
+            <div class="viewfinder-box"></div>
+            <div id="val-flash" class="flash-overlay"></div>
         </div>
         <div class="history-container">
             <div class="action-grid">
@@ -106,12 +100,12 @@
         </div>
     </div>
 
-    <!-- 頁面 3: 盤點模式 -->
     <div id="page-inventory" class="page">
         <div class="back-bar" onclick="stopAndHome('inv')"><i data-lucide="chevron-left"></i> Inventory Mode</div>
         <div class="scanner-container">
             <div id="inv-reader"></div>
-            <div class="viewfinder-box"></div><div id="inv-flash" class="flash-overlay"></div>
+            <div class="viewfinder-box"></div>
+            <div id="inv-flash" class="flash-overlay"></div>
         </div>
         <div class="history-container">
             <div id="inv-status" style="background:var(--dark); color:white; padding:12px; border-radius:12px; text-align:center; margin-bottom:12px;">
@@ -152,30 +146,48 @@
             const btnText = document.getElementById(`${type}-btn-text`);
             const readerId = `${type}-reader`;
 
-            if (scanners[type] && scanners[type].isScanning) {
+            if (scanners[type] && scanners[type].getState() === 2) { // 2 = SCANNING
                 await scanners[type].stop();
-                scanners[type].isScanning = false;
                 btnText.innerText = "Start";
-                document.getElementById(readerId).innerHTML = ""; // 清空避免殘留
             } else {
-                if (!scanners[type]) scanners[type] = new Html5Qrcode(readerId);
+                if (!scanners[type]) {
+                    scanners[type] = new Html5Qrcode(readerId);
+                }
+                
+                const config = { 
+                    fps: 20, 
+                    qrbox: { width: 280, height: 120 },
+                    aspectRatio: 1.0,
+                    // Enable multiple formats to ensure 1D barcodes are recognized
+                    formatsToSupport: [ 
+                        Html5QrcodeSupportedFormats.QR_CODE, 
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8,
+                        Html5QrcodeSupportedFormats.CODE_39
+                    ]
+                };
+
                 try {
-                    // 使用更廣的 qrbox 確保各種條碼都能被捕捉
                     await scanners[type].start(
                         { facingMode: "environment" }, 
-                        { fps: 20, qrbox: { width: 280, height: 120 } }, 
+                        config, 
                         (text) => onScanSuccess(type, text)
                     );
-                    scanners[type].isScanning = true;
                     btnText.innerText = "Stop";
-                } catch (e) { alert("無法啟動相機。請確保在 HTTPS 環境下並授權相機權限。"); }
+                } catch (e) { 
+                    console.error(e);
+                    alert("Camera error: Please ensure you are on HTTPS and have granted camera permissions."); 
+                }
             }
         }
 
         function onScanSuccess(type, text) {
+            // Prevent duplicate scans within 1.5 seconds
             if (Date.now() - lastScanTime < 1500) return;
             lastScanTime = Date.now();
             
+            // Visual feedback
             const flash = document.getElementById(`${type}-flash`);
             flash.classList.add('flash-active');
             setTimeout(() => flash.classList.remove('flash-active'), 200);
@@ -191,12 +203,12 @@
             el.value = ""; el.focus();
         }
 
-        // --- 功能 1: Validator ---
         function processVal(code) {
-            const res = valDb.get(code) || {s:'Unknown'};
+            const res = valDb.get(code.trim()) || {s:'Unknown'};
             valHistory.unshift({code, s: res.s, t: new Date().toLocaleTimeString()});
             renderVal();
         }
+
         function renderVal() {
             document.getElementById('val-list').innerHTML = valHistory.map(i => `
                 <div class="scan-item" style="border-left-color:${i.s==='Approved'?'#10b981':'#ef4444'}">
@@ -204,7 +216,6 @@
                 </div>`).join('');
         }
 
-        // --- 功能 2: Inventory ---
         function resetInv() {
             currentLoc = ""; invSessionItems = []; isWaitLoc = true;
             document.getElementById('inv-step').innerText = "Step 1";
@@ -213,6 +224,7 @@
             document.getElementById('inv-finish-btn').style.display = "none";
             document.getElementById('inv-list').innerHTML = "";
         }
+
         function processInv(text) {
             if (isWaitLoc) {
                 currentLoc = text; isWaitLoc = false;
@@ -230,6 +242,7 @@
                     </div>`).join('');
             }
         }
+
         function finishLoc() {
             if(invSessionItems.length === 0) return alert("No items scanned!");
             const d = new Date();
@@ -239,24 +252,25 @@
             resetInv();
         }
 
-        // --- Excel & CSV ---
         function importExcel(e, type) {
             const reader = new FileReader();
             reader.onload = (event) => {
-                const workbook = XLSX.read(new Uint8Array(event.target.result), {type:'array'});
-                const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames]);
-                if(type === 'val') {
-                    valDb.clear();
-                    data.forEach(r => valDb.set(String(Object.values(r)[0]).trim(), {s: Object.values(r)[1] || 'Unknown'}));
-                } else {
-                    invDb.clear();
-                    // 抓取 O 欄(Barcode) 與 B 欄(Name)
-                    data.forEach(r => {
-                        const vals = Object.values(r);
-                        invDb.set(String(r.Barcode || r.O || '').trim(), String(r.Name || r.B || 'Unknown'));
-                    });
-                }
-                alert("Database Imported Successfully!");
+                try {
+                    const workbook = XLSX.read(new Uint8Array(event.target.result), {type:'array'});
+                    const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                    if(type === 'val') {
+                        valDb.clear();
+                        data.forEach(r => valDb.set(String(Object.values(r)[0]).trim(), {s: Object.values(r)[1] || 'Unknown'}));
+                    } else {
+                        invDb.clear();
+                        data.forEach(r => {
+                            const barcode = String(r.Barcode || r.O || Object.values(r)[0] || '').trim();
+                            const name = String(r.Name || r.B || Object.values(r)[1] || 'Unknown');
+                            if(barcode) invDb.set(barcode, name);
+                        });
+                    }
+                    alert("Database Imported Successfully!");
+                } catch(err) { alert("Error reading file. Please check format."); }
             };
             reader.readAsArrayBuffer(e.target.files);
         }
@@ -266,23 +280,27 @@
             valHistory.forEach(i => csv += `"${i.code}","${i.s}","${i.t}"\n`);
             downloadCSV(csv, "Validator_Export.csv");
         }
+
         function exportInvCSV() {
             let csv = "\ufeffDate Time,Barcode,To\n";
             invFinalRecords.forEach(r => csv += `"${r.t}","${r.b}","${r.to}"\n`);
             downloadCSV(csv, "Inventory_Report.csv");
         }
+
         function downloadCSV(csv, name) {
             const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
             const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();
         }
 
         async function stopAndHome(type) {
-            if(scanners[type] && scanners[type].isScanning) await scanners[type].stop();
+            if(scanners[type] && scanners[type].getState() === 2) await scanners[type].stop();
+            const btnText = document.getElementById(`${type}-btn-text`);
+            if(btnText) btnText.innerText = "Start";
             switchPage('page-home');
         }
 
-        // 初始化圖示
-        lucide.createIcons();
+        // Initialize Lucide Icons
+        window.addEventListener('load', () => lucide.createIcons());
     </script>
 </body>
 </html>
