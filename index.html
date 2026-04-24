@@ -3,274 +3,507 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner Hub Pro - v3.5 Fixed</title>
+    <title>Scanner Hub Pro v4.0</title>
     
-    <!-- Fixed Library Links -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
-        :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f1f5f9; --dark: #0f172a; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body, html { margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); height: 100vh; width: 100vw; overflow: hidden; }
+        :root { 
+            --primary: #3b82f6; 
+            --primary-dark: #1d4ed8;
+            --success: #10b981; 
+            --danger: #ef4444; 
+            --warning: #f59e0b; 
+            --bg: #0f172a; 
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+        }
 
-        .page { display: none; height: 100vh; width: 100vw; flex-direction: column; overflow: hidden; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body, html { 
+            margin: 0; padding: 0; 
+            font-family: 'Inter', -apple-system, system-ui, sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text-main);
+            height: 100vh; width: 100vw; overflow: hidden; 
+        }
+
+        /* Layout */
+        .page { display: none; height: 100vh; width: 100vw; flex-direction: column; }
         .page.active { display: flex; }
 
-        /* 主選單 */
-        #page-home { justify-content: center; align-items: center; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; text-align: center; }
-        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; width: 100%; max-width: 400px; }
-        .menu-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px 10px; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); }
-        .menu-card:active { transform: scale(0.95); }
-        .menu-card i { margin-bottom: 10px; color: var(--primary); display: block; margin: 0 auto 10px auto; }
+        /* Home Screen */
+        #page-home { 
+            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+            justify-content: center; align-items: center; padding: 20px;
+        }
+        .logo-area { text-align: center; margin-bottom: 40px; }
+        .logo-area h1 { font-size: 2rem; margin: 0; letter-spacing: -1px; }
+        .logo-area p { color: var(--text-dim); margin-top: 5px; }
 
-        .back-bar { background: white; padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-weight: bold; border-bottom: 1px solid #e2e8f0; cursor: pointer; color: var(--dark); z-index: 100; }
-        
-        /* 掃描區域 */
-        .scanner-container { position: relative; height: 35vh; width: 100%; background: #000; overflow: hidden; }
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 450px; }
+        .menu-card { 
+            background: var(--card-bg); 
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px; padding: 30px 15px; 
+            text-align: center; cursor: pointer; 
+            transition: all 0.2s ease;
+        }
+        .menu-card:active { transform: scale(0.95); background: #2d3748; }
+        .menu-card i { color: var(--primary); margin-bottom: 12px; width: 32px; height: 32px; }
+        .menu-card h3 { margin: 0; font-size: 1.1rem; }
+
+        /* Header Bar */
+        .header-bar { 
+            background: var(--card-bg); 
+            padding: 15px 20px; 
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+
+        /* Scanner View */
+        .scanner-section { position: relative; height: 30vh; background: #000; }
         #val-reader, #inv-reader { width: 100% !important; height: 100% !important; }
-        .viewfinder-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; height: 120px; border: 2px solid rgba(255,255,255,0.3); border-radius: 12px; z-index: 50; pointer-events: none; }
-        .viewfinder-box::after { content: ''; position: absolute; inset: -2px; border: 4px solid var(--primary); border-radius: 12px; clip-path: polygon(0 0, 20% 0, 20% 10%, 80% 10%, 80% 0, 100% 0, 100% 30%, 90% 30%, 90% 70%, 100% 70%, 100% 100%, 80% 100%, 80% 90%, 20% 90%, 20% 100%, 0 100%, 0 70%, 10% 70%, 10% 30%, 0 30%); }
-        
-        .history-container { flex-grow: 1; background: var(--bg); border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 15px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
-        .stats-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.8rem; font-weight: bold; color: #64748b; padding: 0 5px; }
-        
-        .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
-        .btn { border: none; border-radius: 10px; padding: 10px 2px; font-size: 0.7rem; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-success { background: #ecfdf5; color: var(--success); border: 1px solid #a7f3d0; }
-        .btn-outline { background: white; border: 1px solid #e2e8f0; }
+        .scan-overlay {
+            position: absolute; inset: 0; 
+            border: 2px solid transparent;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none; z-index: 10;
+        }
+        .scan-region {
+            width: 70%; height: 60%;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 16px;
+            position: relative;
+        }
+        .scan-region::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 20px; height: 20px;
+            border-top: 4px solid var(--primary); border-left: 4px solid var(--primary); border-top-left-radius: 12px;
+        }
+        .scan-region::after {
+            content: ''; position: absolute; bottom: 0; right: 0; width: 20px; height: 20px;
+            border-bottom: 4px solid var(--primary); border-right: 4px solid var(--primary); border-bottom-right-radius: 12px;
+        }
 
-        .input-group { display: flex; gap: 8px; margin-bottom: 12px; background: white; padding: 8px; border-radius: 12px; }
-        .input-group input { flex-grow: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; outline: none; }
-        .btn-submit { background: var(--dark); color: white; border: none; border-radius: 8px; padding: 0 15px; font-weight: bold; }
+        /* Control Panel */
+        .main-content { 
+            flex-grow: 1; background: var(--bg); 
+            border-radius: 24px 24px 0 0; margin-top: -20px;
+            position: relative; z-index: 20; padding: 20px;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
 
-        .history-list { flex-grow: 1; overflow-y: auto; }
-        .scan-item { display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 12px; margin-bottom: 8px; border-left: 6px solid #cbd5e1; }
-        .flash-overlay { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 101; }
-        .flash-active { animation: flash-anim 0.2s ease-out; }
-        @keyframes flash-anim { 0% { opacity: 0.7; } 100% { opacity: 0; } }
+        .stats-badge-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .stat-badge { 
+            background: rgba(255,255,255,0.05); padding: 6px 12px; 
+            border-radius: 100px; font-size: 0.75rem; color: var(--text-dim);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .stat-badge span { color: var(--primary); font-weight: bold; }
+
+        .toolbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+        .tool-btn {
+            background: var(--card-bg); border: 1px solid rgba(255,255,255,0.1);
+            color: white; border-radius: 12px; padding: 10px 5px;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            font-size: 0.65rem; font-weight: 500; cursor: pointer;
+        }
+        .tool-btn.active { background: var(--primary); border-color: var(--primary); }
+        .tool-btn i { width: 18px; height: 18px; }
+
+        .input-box {
+            display: flex; background: var(--card-bg); border-radius: 12px;
+            padding: 4px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .input-box input {
+            flex: 1; background: transparent; border: none; color: white;
+            padding: 10px 15px; font-size: 0.9rem;
+        }
+        .input-box button {
+            background: var(--primary); border: none; color: white;
+            padding: 0 15px; border-radius: 8px; font-weight: 600;
+        }
+
+        /* List Area */
+        .list-container { flex: 1; overflow-y: auto; padding-right: 5px; }
+        .list-item {
+            background: var(--card-bg); border-radius: 12px; padding: 12px;
+            margin-bottom: 10px; display: flex; justify-content: space-between;
+            align-items: center; border-left: 4px solid #475569;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .item-info b { display: block; font-size: 0.95rem; margin-bottom: 2px; }
+        .item-info small { color: var(--text-dim); font-size: 0.75rem; }
+        
+        /* Status Banner for Inventory */
+        .status-banner {
+            background: linear-gradient(90deg, #1e293b, #334155);
+            border-radius: 12px; padding: 12px; margin-bottom: 15px;
+            display: flex; align-items: center; gap: 15px;
+        }
+        .step-indicator {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--primary); display: flex; align-items: center;
+            justify-content: center; font-weight: bold; flex-shrink: 0;
+        }
+
+        /* Flash Effect */
+        #flash-effect {
+            position: fixed; inset: 0; background: white; opacity: 0;
+            pointer-events: none; z-index: 999;
+        }
+        .flash-active { animation: flash-play 0.2s ease-out; }
+        @keyframes flash-play { 0% { opacity: 0.8; } 100% { opacity: 0; } }
     </style>
 </head>
 <body>
 
+    <div id="flash-effect"></div>
+
+    <!-- Home Page -->
     <div id="page-home" class="page active">
-        <h1 style="margin-bottom:5px;">Scanner Hub Pro</h1>
-        <p style="opacity:0.7; margin-bottom:30px;">Inventory & Validator Solutions</p>
+        <div class="logo-area">
+            <i data-lucide="aperture" style="width: 48px; height: 48px; color: var(--primary); margin-bottom: 10px;"></i>
+            <h1>Scanner Hub <span style="color:var(--primary)">Pro</span></h1>
+            <p>Enterprise Scanning Solution</p>
+        </div>
         <div class="menu-grid">
-            <div class="menu-card" onclick="switchPage('page-validator')"><i data-lucide="shield-check"></i><h3>Validator</h3></div>
-            <div class="menu-card" onclick="switchPage('page-inventory')"><i data-lucide="package-search"></i><h3>Inventory</h3></div>
+            <div class="menu-card" onclick="switchPage('page-validator')">
+                <i data-lucide="shield-check"></i>
+                <h3>Validator</h3>
+            </div>
+            <div class="menu-card" onclick="switchPage('page-inventory')">
+                <i data-lucide="layout-grid"></i>
+                <h3>Inventory</h3>
+            </div>
         </div>
+        <p style="position:fixed; bottom:20px; color:var(--text-dim); font-size:0.7rem;">v4.0.2 Build 2026</p>
     </div>
 
-    <!-- Validator Mode -->
+    <!-- Validator Page -->
     <div id="page-validator" class="page">
-        <div class="back-bar" onclick="stopAndHome('val')"><i data-lucide="chevron-left"></i> Validator Mode</div>
-        <div class="scanner-container">
-            <div id="val-reader"></div>
-            <div class="viewfinder-box"></div><div id="val-flash" class="flash-overlay"></div>
+        <div class="header-bar">
+            <div class="header-left" onclick="stopAndHome('val')">
+                <i data-lucide="chevron-left"></i> Validator Mode
+            </div>
+            <i data-lucide="settings" style="width:20px; color:var(--text-dim)"></i>
         </div>
-        <div class="history-container">
-            <div class="stats-row">
-                <span>DB Items: <span id="val-db-stat" style="color:var(--primary)">0</span></span>
-                <span>Total Scans: <span id="val-scan-stat" style="color:var(--primary)">0</span></span>
+        
+        <div class="scanner-section">
+            <div id="val-reader"></div>
+            <div class="scan-overlay"><div class="scan-region"></div></div>
+        </div>
+
+        <div class="main-content">
+            <div class="stats-badge-row">
+                <div class="stat-badge">Database: <span id="val-db-count">0</span></div>
+                <div class="stat-badge">Scanned: <span id="val-scan-count">0</span></div>
             </div>
-            <div class="action-grid">
-                <button id="val-toggle-btn" onclick="toggleScanner('val')" class="btn btn-primary"><i data-lucide="camera"></i><span id="val-btn-text">Start</span></button>
-                <button onclick="document.getElementById('val-file').click()" class="btn btn-success"><i data-lucide="file-up"></i>Import</button>
-                <button onclick="exportValCSV()" class="btn btn-outline"><i data-lucide="download"></i>Export</button>
-                <button onclick="valHistory=[];renderVal();" class="btn btn-outline" style="color:var(--danger)"><i data-lucide="trash-2"></i>Clear</button>
+
+            <div class="toolbar">
+                <button id="val-toggle-btn" onclick="toggleScanner('val')" class="tool-btn">
+                    <i data-lucide="play" id="val-icon"></i><span id="val-text">Start</span>
+                </button>
+                <button onclick="document.getElementById('val-file').click()" class="tool-btn">
+                    <i data-lucide="file-up"></i>Import
+                </button>
+                <button onclick="exportData('val')" class="tool-btn">
+                    <i data-lucide="download"></i>Export
+                </button>
+                <button onclick="clearHistory('val')" class="tool-btn" style="color:var(--danger)">
+                    <i data-lucide="trash-2"></i>Clear
+                </button>
             </div>
-            <input type="file" id="val-file" style="display:none" onchange="importExcel(event, 'val')">
-            <div class="input-group">
-                <input type="text" id="val-input" placeholder="Manual Input..." onkeypress="if(event.key==='Enter') handleManual('val')">
-                <button class="btn-submit" onclick="handleManual('val')">OK</button>
+
+            <input type="file" id="val-file" hidden onchange="handleImport(event, 'val')">
+
+            <div class="input-box">
+                <input type="text" id="val-input" placeholder="Manual barcode entry..." onkeypress="if(event.key==='Enter') handleManual('val')">
+                <button onclick="handleManual('val')">ADD</button>
             </div>
-            <div id="val-list" class="history-list"></div>
+
+            <div id="val-list" class="list-container">
+                <!-- Items appear here -->
+            </div>
         </div>
     </div>
 
-    <!-- Inventory Mode -->
+    <!-- Inventory Page -->
     <div id="page-inventory" class="page">
-        <div class="back-bar" onclick="stopAndHome('inv')"><i data-lucide="chevron-left"></i> Inventory Mode</div>
-        <div class="scanner-container">
-            <div id="inv-reader"></div>
-            <div class="viewfinder-box"></div><div id="inv-flash" class="flash-overlay"></div>
+        <div class="header-bar">
+            <div class="header-left" onclick="stopAndHome('inv')">
+                <i data-lucide="chevron-left"></i> Inventory Mode
+            </div>
+            <div class="stat-badge">DB: <span id="inv-db-count">0</span></div>
         </div>
-        <div class="history-container">
-            <div class="stats-row">
-                <span>DB Items: <span id="inv-db-stat" style="color:var(--primary)">0</span></span>
+
+        <div class="scanner-section">
+            <div id="inv-reader"></div>
+            <div class="scan-overlay"><div class="scan-region"></div></div>
+        </div>
+
+        <div class="main-content">
+            <div id="inv-status-banner" class="status-banner">
+                <div class="step-indicator" id="inv-step-num">1</div>
+                <div>
+                    <div style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:bold;">Current Task</div>
+                    <div id="inv-instruction" style="font-weight:600;">Scan Location Barcode</div>
+                </div>
             </div>
-            <div id="inv-status" style="background:var(--dark); color:white; padding:12px; border-radius:12px; text-align:center; margin-bottom:12px;">
-                <div id="inv-step" style="font-size:0.7rem; opacity:0.6; text-transform:uppercase;">Step 1</div>
-                <div id="inv-instr" style="font-weight:bold;">Scan Location Barcode</div>
-                <div id="inv-loc-info" style="display:none; color:var(--primary); margin-top:5px; font-weight:800; border-top:1px solid rgba(255,255,255,0.1); padding-top:5px;">TO: <span id="loc-display"></span></div>
+
+            <div class="toolbar">
+                <button id="inv-toggle-btn" onclick="toggleScanner('inv')" class="tool-btn">
+                    <i data-lucide="play" id="inv-icon"></i><span id="inv-text">Start</span>
+                </button>
+                <button onclick="document.getElementById('inv-file').click()" class="tool-btn">
+                    <i data-lucide="database"></i>Load DB
+                </button>
+                <button id="inv-done-btn" onclick="commitInventory()" class="tool-btn" style="display:none; background:var(--success); border:none;">
+                    <i data-lucide="check-circle"></i>Submit
+                </button>
+                <button onclick="exportData('inv')" class="tool-btn">
+                    <i data-lucide="download"></i>CSV
+                </button>
             </div>
-            <div class="action-grid">
-                <button id="inv-toggle-btn" onclick="toggleScanner('inv')" class="btn btn-primary"><i data-lucide="camera"></i><span id="inv-btn-text">Start</span></button>
-                <button onclick="document.getElementById('inv-file').click()" class="btn btn-success"><i data-lucide="file-up"></i>Import DB</button>
-                <button id="inv-finish-btn" onclick="finishLoc()" class="btn btn-primary" style="background:var(--success); display:none;"><i data-lucide="check-circle"></i>Finish</button>
-                <button onclick="exportInvCSV()" class="btn btn-outline"><i data-lucide="download"></i>CSV</button>
+
+            <input type="file" id="inv-file" hidden onchange="handleImport(event, 'inv')">
+
+            <div class="input-box">
+                <input type="text" id="inv-input" placeholder="Type barcode..." onkeypress="if(event.key==='Enter') handleManual('inv')">
+                <button onclick="handleManual('inv')">OK</button>
             </div>
-            <input type="file" id="inv-file" style="display:none" onchange="importExcel(event, 'inv')">
-            <div class="input-group">
-                <input type="text" id="inv-input" placeholder="Type Location/Barcode..." onkeypress="if(event.key==='Enter') handleManual('inv')">
-                <button class="btn-submit" onclick="handleManual('inv')">OK</button>
-            </div>
-            <div id="inv-list" class="history-list"></div>
+
+            <div id="inv-list" class="list-container"></div>
         </div>
     </div>
 
     <script>
+        // State Management
         let scanners = { val: null, inv: null };
-        let valDb = new Map(), invDb = new Map();
-        let valHistory = [], invSessionItems = [], invFinalRecords = [];
-        let currentLoc = "", isWaitLoc = true;
+        let databases = { val: new Map(), inv: new Map() };
+        let history = { val: [], inv_session: [], inv_final: [] };
+        let invContext = { location: "", isWaitingForLoc: true };
         let lastScanTime = 0;
 
-        function switchPage(id) {
+        // Initialize Icons
+        lucide.createIcons();
+
+        function switchPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
+            document.getElementById(pageId).classList.add('active');
+            if(pageId === 'page-inventory') resetInventorySession();
             lucide.createIcons();
-            if(id === 'page-inventory') resetInv();
         }
 
         async function toggleScanner(type) {
-            const btnText = document.getElementById(`${type}-btn-text`);
+            const btnText = document.getElementById(`${type}-text`);
+            const btnIcon = document.getElementById(`${type}-icon`);
+
             if (scanners[type] && scanners[type].getState() === 2) {
                 await scanners[type].stop();
                 btnText.innerText = "Start";
+                btnIcon.setAttribute('data-lucide', 'play');
             } else {
                 if (!scanners[type]) scanners[type] = new Html5Qrcode(`${type}-reader`);
                 try {
                     await scanners[type].start(
-                        { facingMode: "environment" }, 
-                        { fps: 20, qrbox: { width: 280, height: 120 }, formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128, Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.QR_CODE] }, 
+                        { facingMode: "environment" },
+                        { 
+                            fps: 15, 
+                            qrbox: (w, h) => { return { width: w * 0.7, height: h * 0.5 } },
+                            aspectRatio: 1.0
+                        },
                         (text) => onScanSuccess(type, text)
                     );
                     btnText.innerText = "Stop";
-                } catch (e) { alert("Camera error: Ensure HTTPS and permissions."); }
+                    btnIcon.setAttribute('data-lucide', 'square');
+                } catch (err) {
+                    alert("Camera Access Denied or Not Found.");
+                }
             }
+            lucide.createIcons();
         }
 
         function onScanSuccess(type, text) {
-            if (Date.now() - lastScanTime < 1500) return;
-            lastScanTime = Date.now();
-            const flash = document.getElementById(`${type}-flash`);
+            const now = Date.now();
+            if (now - lastScanTime < 1200) return; // Debounce
+            lastScanTime = now;
+
+            // Visual Feedback
+            const flash = document.getElementById('flash-effect');
             flash.classList.add('flash-active');
             setTimeout(() => flash.classList.remove('flash-active'), 200);
-            if (navigator.vibrate) navigator.vibrate(50);
-            if(type === 'val') processVal(text); else processInv(text);
+            if (navigator.vibrate) navigator.vibrate(60);
+
+            if (type === 'val') processValidator(text);
+            else processInventory(text);
         }
 
         function handleManual(type) {
-            const el = document.getElementById(`${type}-input`);
-            if(!el.value) return;
-            if(type === 'val') processVal(el.value); else processInv(el.value);
-            el.value = ""; el.focus();
+            const input = document.getElementById(`${type}-input`);
+            const val = input.value.trim();
+            if (!val) return;
+            if (type === 'val') processValidator(val);
+            else processInventory(val);
+            input.value = "";
         }
 
         // --- Validator Logic ---
-        function processVal(code) {
-            const res = valDb.get(code.trim()) || {s:'Unknown'};
-            valHistory.unshift({code, s: res.s, t: new Date().toLocaleTimeString()});
-            document.getElementById('val-scan-stat').innerText = valHistory.length;
-            renderVal();
+        function processValidator(code) {
+            const match = databases.val.get(code);
+            const status = match ? match.status : "Unknown";
+            const color = status.toLowerCase() === 'approved' || status.toLowerCase() === 'ok' ? 'var(--success)' : 'var(--danger)';
+            
+            history.val.unshift({
+                code,
+                status,
+                time: new Date().toLocaleTimeString(),
+                color
+            });
+            
+            updateValidatorUI();
         }
-        function renderVal() {
-            document.getElementById('val-list').innerHTML = valHistory.map(i => `
-                <div class="scan-item" style="border-left-color:${i.s==='Approved'?'#10b981':'#ef4444'}">
-                    <div><b>${i.code}</b><br><small>${i.s} | ${i.t}</small></div>
-                </div>`).join('');
+
+        function updateValidatorUI() {
+            document.getElementById('val-scan-count').innerText = history.val.length;
+            const list = document.getElementById('val-list');
+            list.innerHTML = history.val.map(item => `
+                <div class="list-item" style="border-left-color: ${item.color}">
+                    <div class="item-info">
+                        <b>${item.code}</b>
+                        <small>${item.status} • ${item.time}</small>
+                    </div>
+                    <i data-lucide="${item.color.includes('success') ? 'check-circle' : 'alert-circle'}" 
+                       style="color:${item.color}; width:20px;"></i>
+                </div>
+            `).join('');
+            lucide.createIcons();
         }
 
         // --- Inventory Logic ---
-        function resetInv() {
-            currentLoc = ""; invSessionItems = []; isWaitLoc = true;
-            document.getElementById('inv-step').innerText = "Step 1";
-            document.getElementById('inv-instr').innerText = "Scan Location Barcode";
-            document.getElementById('inv-loc-info').style.display = "none";
-            document.getElementById('inv-finish-btn').style.display = "none";
+        function resetInventorySession() {
+            invContext = { location: "", isWaitingForLoc: true };
+            history.inv_session = [];
+            document.getElementById('inv-step-num').innerText = "1";
+            document.getElementById('inv-step-num').style.background = "var(--primary)";
+            document.getElementById('inv-instruction').innerText = "Scan Location Barcode";
+            document.getElementById('inv-done-btn').style.display = "none";
             document.getElementById('inv-list').innerHTML = "";
         }
-        function processInv(text) {
-            const cleanText = text.trim();
-            if (isWaitLoc) {
-                currentLoc = cleanText; isWaitLoc = false;
-                document.getElementById('inv-step').innerText = "Step 2";
-                document.getElementById('inv-instr').innerText = "Scan Inventory Barcodes";
-                document.getElementById('loc-display').innerText = cleanText;
-                document.getElementById('inv-loc-info').style.display = "block";
-                document.getElementById('inv-finish-btn').style.display = "inline-flex";
+
+        function processInventory(text) {
+            if (invContext.isWaitingForLoc) {
+                invContext.location = text;
+                invContext.isWaitingForLoc = false;
+                document.getElementById('inv-step-num').innerText = "2";
+                document.getElementById('inv-step-num').style.background = "var(--success)";
+                document.getElementById('inv-instruction').innerText = `Loc: ${text} (Scan Items)`;
+                document.getElementById('inv-done-btn').style.display = "flex";
             } else {
-                const name = invDb.get(cleanText) || "Unknown Item";
-                invSessionItems.push({barcode: cleanText, name: name});
-                document.getElementById('inv-list').innerHTML = invSessionItems.slice().reverse().map(i => `
-                    <div class="scan-item" style="border-left-color:var(--primary)">
-                        <div><b>${i.barcode}</b><br><small>${i.name}</small></div>
-                    </div>`).join('');
+                const itemData = databases.inv.get(text) || "Unknown Item";
+                history.inv_session.unshift({ barcode: text, name: itemData });
+                renderInvSession();
             }
         }
-        function finishLoc() {
-            if(invSessionItems.length === 0) return alert("No items scanned!");
-            const d = new Date();
-            const ts = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
-            invFinalRecords.push({ t: ts, b: invSessionItems.map(i=>i.barcode).join('; '), to: currentLoc });
-            alert("Location Recorded.");
-            resetInv();
+
+        function renderInvSession() {
+            const list = document.getElementById('inv-list');
+            list.innerHTML = history.inv_session.map(item => `
+                <div class="list-item" style="border-left-color: var(--primary)">
+                    <div class="item-info">
+                        <b>${item.barcode}</b>
+                        <small>${item.name}</small>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        // --- Enhanced Excel Import ---
-        function importExcel(e, type) {
+        function commitInventory() {
+            if (history.inv_session.length === 0) return alert("No items scanned.");
+            
+            const timestamp = new Date().toLocaleString();
+            history.inv_session.forEach(item => {
+                history.inv_final.push({
+                    time: timestamp,
+                    location: invContext.location,
+                    barcode: item.barcode,
+                    name: item.name
+                });
+            });
+
+            alert(`Saved ${history.inv_session.length} items to ${invContext.location}`);
+            resetInventorySession();
+        }
+
+        // --- Data Handling ---
+        function handleImport(event, type) {
+            const file = event.target.files[0];
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = (e) => {
                 try {
-                    const workbook = XLSX.read(new Uint8Array(event.target.result), {type:'array'});
-                    const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                    
-                    if(type === 'val') {
-                        valDb.clear();
-                        rawData.forEach(r => {
-                            const vals = Object.values(r);
-                            valDb.set(String(vals[0] || '').trim(), {s: vals[1] || 'Unknown'});
-                        });
-                        document.getElementById('val-db-stat').innerText = valDb.size;
-                    } else {
-                        invDb.clear();
-                        rawData.forEach(r => {
-                            // 自動搜尋 O欄位(約第15欄) 或 B欄位(約第2欄)
-                            const barcode = String(r.Barcode || r.O || Object.values(r)[14] || Object.values(r)[0] || '').trim();
-                            const name = String(r.Name || r.B || Object.values(r)[1] || 'Unknown').trim();
-                            if(barcode) invDb.set(barcode, name);
-                        });
-                        document.getElementById('inv-db-stat').innerText = invDb.size;
-                    }
-                    alert(`Successfully imported ${type==='val'?valDb.size:invDb.size} records.`);
-                } catch(err) { alert("Error reading file."); }
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const json = XLSX.utils.sheet_to_json(sheet);
+
+                    databases[type].clear();
+                    json.forEach(row => {
+                        const keys = Object.keys(row);
+                        // Flexible mapping: find columns that look like barcode/name/status
+                        const barcode = String(row[keys.find(k => /code|id|barcode/i.test(k))] || keys[0] ? row[keys[0]] : '').trim();
+                        const info = row[keys.find(k => /name|desc|status/i.test(k))] || (keys[1] ? row[keys[1]] : 'N/A');
+                        
+                        if(barcode) {
+                            if(type === 'val') databases.val.set(barcode, { status: info });
+                            else databases.inv.set(barcode, info);
+                        }
+                    });
+
+                    document.getElementById(`${type}-db-count`).innerText = databases[type].size;
+                    alert(`Imported ${databases[type].size} records.`);
+                } catch (err) {
+                    alert("Error parsing Excel file. Ensure it has headers.");
+                }
             };
-            reader.readAsArrayBuffer(e.target.files);
+            reader.readAsArrayBuffer(file);
         }
 
-        function exportValCSV() {
-            let csv = "Barcode,Status,Time\n";
-            valHistory.forEach(i => csv += `"${i.code}","${i.s}","${i.t}"\n`);
-            downloadCSV(csv, "Validator_Report.csv");
+        function exportData(type) {
+            let csv = "\ufeff";
+            if (type === 'val') {
+                csv += "Barcode,Status,Time\n";
+                history.val.forEach(i => csv += `"${i.code}","${i.status}","${i.time}"\n`);
+            } else {
+                csv += "Timestamp,Location,Barcode,ItemName\n";
+                history.inv_final.forEach(i => csv += `"${i.time}","${i.location}","${i.barcode}","${i.name}"\n`);
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `${type}_report_${new Date().getTime()}.csv`);
+            link.click();
         }
-        function exportInvCSV() {
-            let csv = "\ufeffDate Time,Barcode,To\n";
-            invFinalRecords.forEach(r => csv += `"${r.t}","${r.b}","${r.to}"\n`);
-            downloadCSV(csv, "Inventory_Report.csv");
+
+        function clearHistory(type) {
+            if(confirm("Clear all scanned data?")) {
+                history[type] = [];
+                if(type === 'val') updateValidatorUI();
+            }
         }
-        function downloadCSV(csv, name) {
-            const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();
-        }
+
         async function stopAndHome(type) {
-            if(scanners[type] && scanners[type].getState() === 2) await scanners[type].stop();
+            if (scanners[type] && scanners[type].getState() === 2) {
+                await scanners[type].stop();
+            }
             switchPage('page-home');
         }
-        window.addEventListener('load', () => lucide.createIcons());
     </script>
 </body>
 </html>
