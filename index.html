@@ -3,48 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner Hub Pro v2</title>
+    <title>Scanner Hub Pro - Official v3</title>
+    
+    <!-- 1. 條碼掃描核心 -->
     <script src="https://unpkg.com"></script>
+    <!-- 2. UI 圖示庫 -->
     <script src="https://unpkg.com"></script>
-    <script src="https://cloudflare.com"></script>
+    <!-- 3. Excel 處理庫 -->
+    <script src="https://sheetjs.com"></script>
     
     <style>
         :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --bg: #f1f5f9; --dark: #0f172a; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body, html { margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); height: 100vh; width: 100vw; overflow: hidden; }
 
+        /* 頁面切換架構 */
         .page { display: none; height: 100vh; width: 100vw; flex-direction: column; overflow: hidden; }
         .page.active { display: flex; }
 
-        /* 主選單 */
+        /* 主選單樣式 */
         #page-home { justify-content: center; align-items: center; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; text-align: center; }
         .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; width: 100%; max-width: 400px; }
-        .menu-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px 10px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px); }
+        .menu-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px 10px; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); }
         .menu-card:active { transform: scale(0.95); }
         .menu-card i { margin-bottom: 10px; color: var(--primary); display: block; margin-left: auto; margin-right: auto; }
 
-        /* UI 元件 */
-        .back-bar { background: white; padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-weight: bold; border-bottom: 1px solid #e2e8f0; cursor: pointer; }
-        .scanner-container { position: relative; height: 28vh; width: 100%; background: #000; overflow: hidden; }
-        .reader-div { width: 100% !important; height: 100% !important; }
+        /* 掃描區域 UI */
+        .back-bar { background: white; padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-weight: bold; border-bottom: 1px solid #e2e8f0; cursor: pointer; color: var(--dark); }
+        .scanner-container { position: relative; height: 30vh; width: 100%; background: #000; overflow: hidden; }
         .viewfinder-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 240px; height: 60px; border: 2px solid rgba(255,255,255,0.3); border-radius: 12px; z-index: 20; pointer-events: none; box-shadow: 0 0 0 1000px rgba(0,0,0,0.5); }
         .viewfinder-box::after { content: ''; position: absolute; inset: -2px; border: 3px solid var(--primary); border-radius: 12px; clip-path: polygon(0 0, 20% 0, 20% 10%, 80% 10%, 80% 0, 100% 0, 100% 30%, 90% 30%, 90% 70%, 100% 70%, 100% 100%, 80% 100%, 80% 90%, 20% 90%, 20% 100%, 0 100%, 0 70%, 10% 70%, 10% 30%, 0 30%); }
-        .scan-line { position: absolute; top: 50%; left: 10%; width: 80%; height: 2px; background: rgba(37, 99, 235, 0.5); box-shadow: 0 0 8px var(--primary); z-index: 21; animation: scan-move 2s infinite ease-in-out; }
-        @keyframes scan-move { 0%, 100% { transform: translateY(-30px); } 50% { transform: translateY(30px); } }
-
-        .history-container { flex-grow: 1; background: var(--bg); border-top-left-radius: 20px; border-top-right-radius: 20px; z-index: 30; padding: 15px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
+        
+        .history-container { flex-grow: 1; background: var(--bg); border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 15px; display: flex; flex-direction: column; overflow: hidden; }
         .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
-        .btn { border: none; border-radius: 10px; padding: 8px 2px; font-size: 0.7rem; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .btn { border: none; border-radius: 10px; padding: 10px 2px; font-size: 0.7rem; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-success { background: #ecfdf5; color: var(--success); border: 1px solid #a7f3d0; }
         .btn-outline { background: white; border: 1px solid #e2e8f0; }
 
-        .input-group { display: flex; gap: 8px; margin-bottom: 12px; background: white; padding: 6px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .input-group input { flex-grow: 1; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; outline: none; font-size: 0.9rem; }
-        .btn-submit { background: var(--dark); color: white; border: none; border-radius: 6px; padding: 0 12px; font-weight: bold; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 12px; background: white; padding: 8px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .input-group input { flex-grow: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; outline: none; }
+        .btn-submit { background: var(--dark); color: white; border: none; border-radius: 8px; padding: 0 15px; font-weight: bold; }
 
         .history-list { flex-grow: 1; overflow-y: auto; }
-        .scan-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: white; border-radius: 10px; margin-bottom: 6px; border-left: 5px solid #cbd5e1; font-size: 0.85rem; }
+        .scan-item { display: flex; justify-content: space-between; padding: 12px; background: white; border-radius: 12px; margin-bottom: 8px; border-left: 6px solid #cbd5e1; }
         .flash-overlay { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 100; }
         .flash-active { animation: flash-anim 0.15s ease-out; }
         @keyframes flash-anim { 0% { opacity: 0.6; } 100% { opacity: 0; } }
@@ -52,50 +54,51 @@
 </head>
 <body>
 
-    <!-- 頁面 1: 首頁 -->
+    <!-- 主首頁 -->
     <div id="page-home" class="page active">
-        <h1 style="margin-bottom:0;">Scanner Hub Pro</h1>
-        <p style="opacity:0.7; margin-bottom:30px;">Select Mode</p>
+        <h1>Scanner Hub Pro</h1>
+        <p style="opacity:0.7;">Select Mode</p>
         <div class="menu-grid">
             <div class="menu-card" onclick="switchPage('page-validator')"><i data-lucide="shield-check"></i><h3>Validator</h3></div>
             <div class="menu-card" onclick="switchPage('page-inventory')"><i data-lucide="package-search"></i><h3>Inventory</h3></div>
         </div>
     </div>
 
-    <!-- 頁面 2: 資料驗證 -->
+    <!-- 驗證模式 (Function 1) -->
     <div id="page-validator" class="page">
         <div class="back-bar" onclick="stopAndHome('val')"><i data-lucide="chevron-left"></i> Validator Mode</div>
         <div class="scanner-container">
-            <div id="val-reader" class="reader-div"></div>
+            <div id="val-reader" style="width:100%; height:100%;"></div>
             <div class="viewfinder-box"></div><div id="val-flash" class="flash-overlay"></div>
         </div>
         <div class="history-container">
             <div class="action-grid">
                 <button id="val-toggle-btn" onclick="toggleScanner('val')" class="btn btn-primary"><i data-lucide="camera"></i><span id="val-btn-text">Start</span></button>
                 <button onclick="document.getElementById('val-file').click()" class="btn btn-success"><i data-lucide="file-up"></i>Import</button>
-                <button onclick="exportValCSV()" class="btn btn-outline"><i data-lucide="download"></i>Export</button>
+                <button onclick="exportValCSV()" class="btn btn-outline"><i data-lucide="download"></i>CSV</button>
                 <button onclick="valHistory=[];renderVal();" class="btn btn-outline" style="color:var(--danger)"><i data-lucide="trash-2"></i>Clear</button>
             </div>
             <input type="file" id="val-file" style="display:none" onchange="importExcel(event, 'val')">
             <div class="input-group">
-                <input type="text" id="val-input" placeholder="Enter barcode..." onkeypress="if(event.key==='Enter') handleManual('val')">
+                <input type="text" id="val-input" placeholder="Manual input..." onkeypress="if(event.key==='Enter') handleManual('val')">
                 <button class="btn-submit" onclick="handleManual('val')">OK</button>
             </div>
             <div id="val-list" class="history-list"></div>
         </div>
     </div>
 
-    <!-- 頁面 3: 庫存盤點 -->
+    <!-- 盤點模式 (Function 2) -->
     <div id="page-inventory" class="page">
         <div class="back-bar" onclick="stopAndHome('inv')"><i data-lucide="chevron-left"></i> Inventory Mode</div>
         <div class="scanner-container">
-            <div id="inv-reader" class="reader-div"></div>
+            <div id="inv-reader" style="width:100%; height:100%;"></div>
             <div class="viewfinder-box"></div><div id="inv-flash" class="flash-overlay"></div>
         </div>
         <div class="history-container">
-            <div id="inv-status" style="background:var(--dark); color:white; padding:8px; border-radius:8px; text-align:center; margin-bottom:10px; font-size:0.8rem;">
-                <b id="inv-step-text">STEP 1: Scan Location</b>
-                <div id="inv-current-loc" style="color:var(--primary); font-weight:bold; margin-top:4px; display:none;"></div>
+            <div id="inv-status" style="background:var(--dark); color:white; padding:10px; border-radius:10px; text-align:center; margin-bottom:10px;">
+                <div id="inv-step" style="font-size:0.7rem; opacity:0.7;">STEP 1</div>
+                <div id="inv-instr" style="font-weight:bold;">請掃描儲位 (Location)</div>
+                <div id="inv-loc-display" style="display:none; color:var(--primary); margin-top:4px;">LOC: <span id="loc-name"></span></div>
             </div>
             <div class="action-grid">
                 <button id="inv-toggle-btn" onclick="toggleScanner('inv')" class="btn btn-primary"><i data-lucide="camera"></i><span id="inv-btn-text">Start</span></button>
@@ -105,7 +108,7 @@
             </div>
             <input type="file" id="inv-file" style="display:none" onchange="importExcel(event, 'inv')">
             <div class="input-group">
-                <input type="text" id="inv-input" placeholder="Input Location/Barcode..." onkeypress="if(event.key==='Enter') handleManual('inv')">
+                <input type="text" id="inv-input" placeholder="Input code..." onkeypress="if(event.key==='Enter') handleManual('inv')">
                 <button class="btn-submit" onclick="handleManual('inv')">OK</button>
             </div>
             <div id="inv-list" class="history-list"></div>
@@ -114,10 +117,10 @@
 
     <script>
         let scanners = { val: null, inv: null };
-        let activeType = null;
         let valDb = new Map(), invDb = new Map();
         let valHistory = [], invSessionItems = [], invFinalRecords = [];
         let currentLoc = "", isWaitLoc = true;
+        let lastTime = 0;
 
         function switchPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -128,26 +131,24 @@
 
         async function toggleScanner(type) {
             const btnText = document.getElementById(`${type}-btn-text`);
-            if (scanners[type] && scanners[type].getState() === 2) {
+            if (scanners[type] && scanners[type].isScanning) {
                 await scanners[type].stop();
+                scanners[type].isScanning = false;
                 btnText.innerText = "Start";
             } else {
                 if (!scanners[type]) scanners[type] = new Html5Qrcode(`${type}-reader`);
-                activeType = type;
-                await scanners[type].start({ facingMode: "environment" }, { fps: 15, qrbox: {width: 240, height: 60} }, 
+                await scanners[type].start({ facingMode: "environment" }, { fps: 15, qrbox: {width: 250, height: 100} }, 
                     (text) => onScan(type, text));
+                scanners[type].isScanning = true;
                 btnText.innerText = "Stop";
             }
         }
 
         function onScan(type, text) {
-            const now = Date.now();
-            if (now - window.lastTime < 1200) return;
-            window.lastTime = now;
+            if (Date.now() - lastTime < 1500) return;
+            lastTime = Date.now();
             document.getElementById(`${type}-flash`).classList.add('flash-active');
             setTimeout(()=>document.getElementById(`${type}-flash`).classList.remove('flash-active'), 150);
-            if(navigator.vibrate) navigator.vibrate(50);
-            
             if(type === 'val') processVal(text); else processInv(text);
         }
 
@@ -158,10 +159,9 @@
             input.value = "";
         }
 
-        // --- 邏輯：驗證 ---
         function processVal(code) {
-            const data = valDb.get(code) || {s:'Unknown'};
-            valHistory.unshift({code, s: data.s, t: new Date().toLocaleTimeString()});
+            const res = valDb.get(code) || {s:'Unknown'};
+            valHistory.unshift({code, s: res.s, t: new Date().toLocaleTimeString()});
             renderVal();
         }
         function renderVal() {
@@ -171,21 +171,22 @@
                 </div>`).join('');
         }
 
-        // --- 邏輯：盤點 ---
         function resetInv() {
             currentLoc = ""; invSessionItems = []; isWaitLoc = true;
-            document.getElementById('inv-step-text').innerText = "STEP 1: Scan Location";
-            document.getElementById('inv-current-loc').style.display = "none";
+            document.getElementById('inv-step').innerText = "STEP 1";
+            document.getElementById('inv-instr').innerText = "請掃描儲位 (Location)";
+            document.getElementById('inv-loc-display').style.display = "none";
             document.getElementById('inv-finish-btn').style.display = "none";
             document.getElementById('inv-list').innerHTML = "";
         }
         function processInv(text) {
             if (isWaitLoc) {
                 currentLoc = text; isWaitLoc = false;
-                document.getElementById('inv-step-text').innerText = "STEP 2: Scan Inventory Barcodes";
-                document.getElementById('inv-current-loc').innerText = "Location: " + text;
-                document.getElementById('inv-current-loc').style.display = "block";
-                document.getElementById('inv-finish-btn').style.display = "flex";
+                document.getElementById('inv-step').innerText = "STEP 2";
+                document.getElementById('inv-instr').innerText = "請掃描貨品條碼";
+                document.getElementById('loc-name').innerText = text;
+                document.getElementById('inv-loc-display').style.display = "block";
+                document.getElementById('inv-finish-btn').style.display = "inline-flex";
             } else {
                 const name = invDb.get(text.trim()) || "Unknown Item";
                 invSessionItems.push({barcode: text, name: name});
@@ -196,31 +197,38 @@
             }
         }
         function finishLoc() {
-            const now = new Date();
-            const time = `${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-            invFinalRecords.push({ t: time, b: invSessionItems.map(i=>i.barcode).join('; '), to: currentLoc });
-            alert("Location Recorded");
+            const n = new Date();
+            const ts = `${n.getDate()}/${n.getMonth()+1}/${n.getFullYear()} ${n.getHours()}:${n.getMinutes()}:${n.getSeconds()}`;
+            invFinalRecords.push({ t: ts, b: invSessionItems.map(i=>i.barcode).join('; '), to: currentLoc });
+            alert("Saved Record for " + currentLoc);
             resetInv();
         }
 
-        // --- 通用：Excel & CSV ---
         function importExcel(e, type) {
             const reader = new FileReader();
             reader.onload = (event) => {
-                const sheet = XLSX.read(new Uint8Array(event.target.result), {type:'array'}).Sheets;
-                const data = XLSX.utils.sheet_to_json(sheet[Object.keys(sheet)[0]]);
+                const workbook = XLSX.read(new Uint8Array(event.target.result), {type:'array'});
+                const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames]);
                 if(type === 'val') {
-                    data.forEach(r => valDb.set(String(Object.values(r)[0]), {s: Object.values(r)[1]}));
+                    valDb.clear();
+                    data.forEach(r => valDb.set(String(Object.values(r)[0]).trim(), {s: Object.values(r)[1]}));
                 } else {
-                    // O 欄 (Barcode) 通常是第 14/15 欄, B 欄 (Name) 是第 1 欄
-                    data.forEach(row => {
-                        const vals = Object.values(row);
-                        invDb.set(String(vals[14] || '').trim(), String(vals[1] || ''));
+                    invDb.clear();
+                    // 對照 O 欄(索引14) 與 B 欄(索引1)
+                    data.forEach(r => {
+                        const vals = Object.values(r);
+                        invDb.set(String(vals[14] || '').trim(), String(vals[1] || 'Unknown'));
                     });
                 }
                 alert("Database Imported");
             };
-            reader.readAsArrayBuffer(e.target.files[0]);
+            reader.readAsArrayBuffer(e.target.files);
+        }
+
+        function exportValCSV() {
+            let csv = "Barcode,Status,Time\n";
+            valHistory.forEach(i => csv += `"${i.code}","${i.s}","${i.t}"\n`);
+            downloadCSV(csv, "Validator.csv");
         }
         function exportInvCSV() {
             let csv = "\ufeffDate Time,Barcode,To\n";
@@ -231,13 +239,13 @@
             const blob = new Blob([csv], {type:'text/csv'});
             const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();
         }
+
         async function stopAndHome(type) {
-            if(scanners[type]) await scanners[type].stop();
+            if(scanners[type] && scanners[type].isScanning) await scanners[type].stop();
             switchPage('page-home');
         }
 
         lucide.createIcons();
-        window.lastTime = 0;
     </script>
 </body>
 </html>
