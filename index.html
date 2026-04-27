@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Hub Pro - v6.2 Fixed</title>
+<title>Scanner Hub Pro - v6.3</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -66,7 +66,8 @@
 <div class="action-grid">
 <button onclick="startScanner('val')" class="btn btn-primary"><i data-lucide="camera"></i>Start</button>
 <button onclick="document.getElementById('val-file').click()" class="btn btn-outline"><i data-lucide="file-up"></i>DB</button>
-<button onclick="valHistory=[]; renderVal();" class="btn btn-outline"><i data-lucide="refresh-cw"></i>Clear</button>
+<button onclick="exportValCSV()" class="btn btn-outline"><i data-lucide="download"></i>Export</button>
+<button onclick="confirmClearVal()" class="btn btn-outline" style="color:var(--danger)"><i data-lucide="trash-2"></i>Clear</button>
 </div>
 <input type="file" id="val-file" style="display:none" onchange="importExcel(event, 'val')">
 <div class="input-group">
@@ -79,7 +80,7 @@
 <div id="page-inventory" class="page">
 <div class="back-bar">
 <div onclick="stopAndHome()"><i data-lucide="chevron-left"></i> Back</div>
-<div>Saved: <span id="saved-count" style="color:var(--primary)">0</span></div>
+<div>Saved Sessions: <span id="saved-count" style="color:var(--primary)">0</span></div>
 </div>
 <div class="scanner-container">
 <div id="inv-reader" class="reader-div"></div>
@@ -127,9 +128,11 @@
        let lastScanTime = 0;
        window.addEventListener('load', () => {
            savedRecords = JSON.parse(localStorage.getItem('invRec') || "[]");
+           valHistory = JSON.parse(localStorage.getItem('valHis') || "[]");
            invDb = JSON.parse(localStorage.getItem('invDb') || "{}");
            valDb = JSON.parse(localStorage.getItem('valDb') || "{}");
            document.getElementById('saved-count').innerText = savedRecords.length;
+           renderVal();
            lucide.createIcons();
        });
        function openMode(id) {
@@ -139,19 +142,14 @@
            lucide.createIcons();
        }
        async function stopAndHome() {
-           if(scanner) {
-               try { await scanner.stop(); } catch(e) {}
-               scanner = null;
-           }
+           if(scanner) { try { await scanner.stop(); } catch(e) {} scanner = null; }
            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
            document.getElementById('page-home').classList.add('active');
            lucide.createIcons();
        }
        async function startScanner(type) {
            activeType = type;
-           if (scanner) {
-               try { await scanner.stop(); } catch(e) {}
-           }
+           if (scanner) { try { await scanner.stop(); } catch(e) {} }
            scanner = new Html5Qrcode(`${type}-reader`);
            await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 240, height: 80 } }, (text) => onScanSuccess(text));
        }
@@ -171,24 +169,43 @@
        }
        function processBarcode(code) {
            if(activeType === 'val') {
-               const status = valDb[code] || "Unknown";
-               valHistory.unshift({code, status, time: new Date().toLocaleTimeString()});
+               const info = valDb[code] || {b: "Not Found", c: "", d: ""};
+               valHistory.unshift({code, b: info.b, c: info.c, d: info.d, time: new Date().toLocaleTimeString()});
+               localStorage.setItem('valHis', JSON.stringify(valHistory));
                renderVal();
            } else {
                if (!currentSession.loc) {
                    currentSession.loc = code;
                    document.getElementById('sess-loc').innerText = code;
                } else {
-                   currentSession.items.push({ barcode: code, name: invDb[code] || "Unknown Item" });
+                   currentSession.items.push({ barcode: code, name: invDb[code] || "Unknown" });
                    renderInv();
                }
            }
        }
        function renderVal() {
-           document.getElementById('val-list').innerHTML = valHistory.map(i => `
-<div class="scan-item" style="border-left-color:${i.status==='Approved'?'#10b981':'#ef4444'}">
-<div><b>${i.code}</b><br><small>${i.status} - ${i.time}</small></div>
+           document.getElementById('val-list').innerHTML = valHistory.map((i, idx) => `
+<div class="scan-item" style="border-left-color:${i.b === 'Not Found' ? 'red' : 'var(--primary)'}">
+<div style="flex:1">
+<b>${i.code}</b> <br>
+<small>${i.b} | ${i.c} | ${i.d}</small>
+</div>
+<button onclick="valHistory.splice(${idx},1); renderVal();" style="border:none; background:none; color:red;"><i data-lucide="trash-2"></i></button>
 </div>`).join('');
+           lucide.createIcons();
+       }
+       function confirmClearVal() {
+           if(confirm("Are you sure you want to delete ALL validator records?")) {
+               valHistory = [];
+               localStorage.setItem('valHis', JSON.stringify(valHistory));
+               renderVal();
+           }
+       }
+       function exportValCSV() {
+           if(valHistory.length === 0) return alert("Nothing to export");
+           let csv = "Time,Barcode,Col B,Col C,Col D\n";
+           valHistory.forEach(i => csv += `"${i.time}","${i.code}","${i.b}","${i.c}","${i.d}"\n`);
+           downloadCSV(csv, "Validator_Export");
        }
        function renderInv() {
            const list = document.getElementById('active-session-list');
@@ -203,14 +220,14 @@
            lucide.createIcons();
        }
        function finishSession() {
-           if (!currentSession.loc || currentSession.items.length === 0) return alert("Scan Location + Items first");
+           if (!currentSession.loc || currentSession.items.length === 0) return alert("Need Loc + Items");
            savedRecords.push({ id: Date.now(), time: new Date().toLocaleString(), loc: currentSession.loc, items: [...currentSession.items] });
            localStorage.setItem('invRec', JSON.stringify(savedRecords));
            currentSession = { loc: null, items: [] };
            document.getElementById('sess-loc').innerText = "Wait...";
            document.getElementById('active-session-list').innerHTML = "";
            document.getElementById('saved-count').innerText = savedRecords.length;
-           alert("Record Saved!");
+           alert("Saved!");
        }
        function openExportModal() {
            const list = document.getElementById('modal-list');
@@ -224,7 +241,7 @@
            lucide.createIcons();
        }
        function deleteRecord(id) {
-           if(confirm("Delete this record?")) {
+           if(confirm("Delete this session?")) {
                savedRecords = savedRecords.filter(r => r.id !== id);
                localStorage.setItem('invRec', JSON.stringify(savedRecords));
                document.getElementById('saved-count').innerText = savedRecords.length;
@@ -235,23 +252,33 @@
        function selectAll(v) { document.querySelectorAll('.export-check').forEach(c => c.checked = v); }
        function processExport() {
            const checked = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
-           if(checked.length === 0) return alert("Select records to export");
+           if(checked.length === 0) return;
            let csv = "Time,Barcode,Name,Location\n";
            savedRecords.forEach(r => {
                if(checked.includes(String(r.id))) r.items.forEach(i => csv += `"${r.time}","${i.barcode}","${i.name}","${r.loc}"\n`);
            });
+           downloadCSV(csv, "Inventory_Export");
+       }
+       function downloadCSV(csv, name) {
            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-           a.download = `inventory_${Date.now()}.csv`; a.click();
+           a.download = `${name}_${Date.now()}.csv`; a.click();
        }
        function importExcel(e, type) {
            const reader = new FileReader();
            reader.onload = (ev) => {
-               const data = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).SheetNames[0]]);
+               const sheet = XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).SheetNames[0]];
+               const rows = XLSX.utils.sheet_to_json(sheet, {header: 1}); // Get raw rows for column indexing
                let tempDb = {};
-               data.forEach(r => tempDb[String(Object.values(r)[0]).trim()] = String(Object.values(r)[1] || "Unknown"));
-               if(type === 'val') { valDb = tempDb; localStorage.setItem('valDb', JSON.stringify(valDb)); }
-               else { invDb = tempDb; localStorage.setItem('invDb', JSON.stringify(invDb)); }
-               alert("Database Imported");
+               if(type === 'val') {
+                   // Val Logic: Col A (0) is key. Return Col B (1), C (2), D (3)
+                   rows.forEach(r => { if(r[0]) tempDb[String(r[0]).trim()] = {b: r[1]||"", c: r[2]||"", d: r[3]||""}; });
+                   valDb = tempDb; localStorage.setItem('valDb', JSON.stringify(valDb));
+               } else {
+                   // Inv Logic: Col O (14) is key. Return Col B (1)
+                   rows.forEach(r => { if(r[14]) tempDb[String(r[14]).trim()] = String(r[1] || "Unknown"); });
+                   invDb = tempDb; localStorage.setItem('invDb', JSON.stringify(invDb));
+               }
+               alert("Database Updated Successfully");
            };
            reader.readAsArrayBuffer(e.target.files[0]);
        }
