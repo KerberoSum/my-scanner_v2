@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Hub Pro - v6.6 (Cam-Fix)</title>
+<title>Scanner Hub Pro - v6.7 (Color-Fix)</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -141,18 +141,15 @@
            renderVal();
            lucide.createIcons();
        });
-       // HARD RESET FUNCTION
        async function clearScanner() {
            if (scanner) {
                try {
                    await scanner.stop();
                    await scanner.clear();
-               } catch (e) { console.log("Stop error (safe to ignore):", e); }
+               } catch (e) { }
                scanner = null;
            }
-           // Clear inner HTML to ensure no ghost video elements
-           const containers = ['val-reader', 'inv-reader'];
-           containers.forEach(id => {
+           ['val-reader', 'inv-reader'].forEach(id => {
                const el = document.getElementById(id);
                if (el) el.innerHTML = '';
            });
@@ -173,19 +170,32 @@
        async function startScanner(type) {
            activeType = type;
            await clearScanner();
-           // 100ms delay to allow hardware release
            setTimeout(async () => {
                try {
-                   scanner = new Html5Qrcode(`${type}-reader`);
-                   await scanner.start(
-                       { facingMode: "environment" },
-                       { fps: 15, qrbox: { width: 240, height: 80 }, aspectRatio: 1.0 },
-                       onScanSuccess
-                   );
+                   scanner = new Html5Qrcode(`${type}-reader`, {
+                       verbose: false,
+                       // High-performance canvas optimization
+                       willReadFrequently: true
+                   });
+                   const config = {
+                       fps: 20, // Faster scan rate
+                       qrbox: { width: 240, height: 80 },
+                       // Prevents grey/yellow tint by using clean constraints
+                       videoConstraints: {
+                           facingMode: "environment",
+                           focusMode: "continuous"
+                       }
+                   };
+                   await scanner.start({ facingMode: "environment" }, config, onScanSuccess);
                } catch (err) {
-                   alert("Camera Error: " + err);
+                   // Fallback to basic start if advanced fails
+                   try {
+                       await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 240, height: 80 } }, onScanSuccess);
+                   } catch (e) {
+                       alert("Camera Access Error. Please check permissions.");
+                   }
                }
-           }, 100);
+           }, 150);
        }
        function onScanSuccess(text) {
            if (Date.now() - lastScanTime < 1500) return;
