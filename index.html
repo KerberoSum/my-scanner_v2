@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Hub Pro - v5.0</title>
+<title>Scanner Hub Pro - v5.1</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -108,7 +108,7 @@
 </div>
 <input type="file" id="inv-file" style="display:none" onchange="importExcel(event, 'inv')">
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:0.85rem; font-weight:bold; color:var(--dark);">
-<span>Saved Locations</span>
+<span>Saved Locations Dashboard</span>
 <a href="#" onclick="selectAll(true)" style="color:var(--primary); text-decoration:none;">Select All</a>
 </div>
 <div id="inv-dashboard-list" class="history-list"></div>
@@ -135,7 +135,7 @@
 <div id="detail-loc-name" style="font-weight:900; font-size:1.1rem; color:var(--primary);"></div>
 </div>
 <div class="action-grid">
-<button onclick="closeDetailView()" class="btn btn-outline" style="grid-column: span 2;"><i data-lucide="arrow-left"></i>Back</button>
+<button onclick="closeDetailView()" class="btn btn-outline" style="grid-column: span 2;"><i data-lucide="arrow-left"></i>Back to Dash</button>
 <button onclick="deleteEntireRecord()" class="btn btn-danger" style="grid-column: span 2;"><i data-lucide="trash-2"></i>Delete Record</button>
 </div>
 <div class="input-group">
@@ -149,18 +149,14 @@
 <script>
        let scanners = { val: null, inv: null };
        let valDb = {}, invDb = {};
-       // Data Arrays
        let valHistory = [];
-       let invFinalRecords = []; // Structure: { id: timestamp, t: string, to: string, items: [{barcode, name}] }
-       // Session Variables
+       let invFinalRecords = [];
        let invSessionItems = [];
        let currentLoc = "";
        let isWaitLoc = true;
-       // Navigation State
-       let currentInvView = 'dashboard'; // 'dashboard', 'scan', 'detail'
+       let currentInvView = 'dashboard';
        let activeRecordId = null;
        let lastScanTime = 0;
-       // --- Audio Feedback ---
        function playBeep() {
            try {
                const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -173,7 +169,6 @@
                osc.stop(ctx.currentTime + 0.1);
            } catch (e) {}
        }
-       // --- Init & Storage ---
        window.addEventListener('load', () => {
            lucide.createIcons();
            loadState();
@@ -193,11 +188,9 @@
            }
            if(localStorage.getItem('invFinalRecords')) {
                invFinalRecords = JSON.parse(localStorage.getItem('invFinalRecords'));
-               // Compatibility check if older array structure exists without IDs
                invFinalRecords.forEach(r => { if(!r.id) r.id = Date.now() + Math.random(); });
            }
        }
-       // --- Navigation ---
        function switchPage(id) {
            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
            document.getElementById(id).classList.add('active');
@@ -216,7 +209,6 @@
            await stopScanner(type);
            switchPage('page-home');
        }
-       // --- Camera Logic ---
        async function stopScanner(type) {
            const btnText = document.getElementById(`${type}-btn-text`);
            if (scanners[type] && scanners[type].getState() === 2) {
@@ -243,7 +235,7 @@
            }
        }
        function onScanSuccess(type, text) {
-           if (Date.now() - lastScanTime < 1500) return; // Prevent duplicate reads
+           if (Date.now() - lastScanTime < 1500) return;
            lastScanTime = Date.now();
            playBeep();
            const flash = document.getElementById(`${type}-flash`);
@@ -275,16 +267,14 @@
        function clearValHistory() {
            if(confirm("Clear validator history?")) { valHistory = []; saveState(); renderVal(); }
        }
-       // --- Inventory Sub-View Routing & Logic ---
+       // --- Inventory Routing ---
        function processInv(text) {
            text = text.trim();
            if (currentInvView === 'dashboard') {
-               // If camera scans while on dashboard, auto-start a new session using it as Location
                startNewScanSession(text);
            }
            else if (currentInvView === 'scan') {
                if (isWaitLoc) {
-                   // Manual setting of location
                    currentLoc = text; isWaitLoc = false;
                    document.getElementById('inv-step').innerText = "Step 2";
                    document.getElementById('inv-instr').innerText = "Scan Inventory Barcodes";
@@ -292,14 +282,12 @@
                    document.getElementById('inv-loc-info').style.display = "block";
                    document.getElementById('inv-finish-btn').style.display = "inline-flex";
                } else {
-                   // Scanning items into new session
                    const name = invDb[text] || "Unknown Item";
                    invSessionItems.push({barcode: text, name: name});
                    renderActiveScanList();
                }
            }
            else if (currentInvView === 'detail') {
-               // Live adding item to an existing saved record
                const rec = invFinalRecords.find(r => r.id === activeRecordId);
                if(rec) {
                    const name = invDb[text] || "Unknown Item";
@@ -309,29 +297,34 @@
                }
            }
        }
-       // --- View 1: Dashboard ---
+       // --- Dashboard Render ---
        function renderDashboard() {
            const listEl = document.getElementById('inv-dashboard-list');
            if(invFinalRecords.length === 0) {
-               listEl.innerHTML = `<div style="text-align:center; padding:20px; opacity:0.5;">No locations saved yet.</div>`;
+               listEl.innerHTML = `<div style="text-align:center; padding:20px; opacity:0.5;">No locations saved yet.<br>Click "New Loc" or scan a barcode to begin.</div>`;
                return;
            }
-           listEl.innerHTML = invFinalRecords.slice().reverse().map(r => `
+           listEl.innerHTML = invFinalRecords.slice().reverse().map(r => {
+               // Generate a preview string of the barcodes so the user knows what is inside
+               const barcodes = r.items.map(i => i.barcode).join(', ');
+               const preview = barcodes.length > 30 ? barcodes.substring(0, 30) + '...' : barcodes;
+               return `
 <div class="scan-item">
 <input type="checkbox" class="export-check custom-checkbox" value="${r.id}">
 <div onclick="openDetailView(${r.id})" style="flex-grow:1; margin-left:12px; cursor:pointer;">
-<b style="color:var(--dark); font-size:1.1rem;">${r.to}</b><br>
-<small style="color:var(--primary); font-weight:bold;">${r.items.length} Items</small> | <small>${r.t}</small>
+<b style="color:var(--dark); font-size:1.1rem;">Loc: ${r.to}</b><br>
+<small style="color:var(--primary); font-weight:bold;">${r.items.length} Items:</small> <small style="opacity:0.8">${preview}</small><br>
+<small style="opacity:0.5; font-size:0.6rem;">${r.t}</small>
 </div>
 <i data-lucide="chevron-right" style="color:#cbd5e1;" onclick="openDetailView(${r.id})"></i>
 </div>
-           `).join('');
+           `}).join('');
            lucide.createIcons();
        }
        function selectAll(check) {
            document.querySelectorAll('.export-check').forEach(cb => cb.checked = check);
        }
-       // --- View 2: Active Scan Session ---
+       // --- Active Scan View (WITH DELETE FIX) ---
        function startNewScanSession(autoLoc = null) {
            currentLoc = ""; invSessionItems = []; isWaitLoc = true;
            document.getElementById('inv-step').innerText = "Step 1";
@@ -340,24 +333,35 @@
            document.getElementById('inv-finish-btn').style.display = "none";
            document.getElementById('inv-scan-list').innerHTML = "";
            showInvSubView('scan');
-           if(autoLoc) processInv(autoLoc); // Auto-apply location if passed
+           if(autoLoc) processInv(autoLoc);
        }
        function renderActiveScanList() {
-           document.getElementById('inv-scan-list').innerHTML = invSessionItems.slice().reverse().map(i => `
+           document.getElementById('inv-scan-list').innerHTML = invSessionItems.slice().reverse().map((i, revIndex) => {
+               // Calculate original index to ensure correct deletion
+               const actualIndex = invSessionItems.length - 1 - revIndex;
+               return `
 <div class="scan-item" style="border-left-color:var(--primary)">
-<div><b>${i.barcode}</b><br><small>${i.name}</small></div>
-</div>`).join('');
+<div style="flex-grow:1;"><b>${i.barcode}</b><br><small>${i.name}</small></div>
+<button onclick="deleteActiveScanItem(${actualIndex})" class="btn btn-danger" style="padding:6px; border-radius:6px; margin-left:10px;"><i data-lucide="x"></i></button>
+</div>`;
+           }).join('');
+           lucide.createIcons();
+       }
+       // NEW: Function to delete an item before hitting finish
+       function deleteActiveScanItem(index) {
+           invSessionItems.splice(index, 1);
+           renderActiveScanList();
        }
        function cancelScanSession() {
            if(invSessionItems.length > 0 && !confirm("Discard current scan session?")) return;
            showInvSubView('dashboard');
        }
        function finishLoc() {
-           if(invSessionItems.length === 0) return alert("No items scanned!");
+           if(invSessionItems.length === 0) return alert("No items scanned! Cannot save an empty location.");
            const d = new Date();
            const ts = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
            invFinalRecords.push({
-               id: Date.now(), // Unique ID for drill-down editing
+               id: Date.now(),
                t: ts,
                to: currentLoc,
                items: [...invSessionItems]
@@ -365,7 +369,7 @@
            saveState();
            showInvSubView('dashboard');
        }
-       // --- View 3: Detail / Edit View ---
+       // --- Detail Edit View ---
        function openDetailView(id) {
            activeRecordId = id;
            const rec = invFinalRecords.find(r => r.id === id);
@@ -380,7 +384,6 @@
                listEl.innerHTML = `<div style="text-align:center; opacity:0.5; padding:10px;">Location is empty. Scan to add.</div>`;
                return;
            }
-           // Render items with a delete button for each
            listEl.innerHTML = rec.items.slice().reverse().map((item, reverseIndex) => {
                const actualIndex = rec.items.length - 1 - reverseIndex;
                return `
@@ -409,22 +412,24 @@
            activeRecordId = null;
            showInvSubView('dashboard');
        }
-       // --- Export Logic ---
+       // --- FIXED EXPORT LOGIC ---
        function exportSelectedCSV() {
            const checked = document.querySelectorAll('.export-check:checked');
            if(checked.length === 0) return alert("Please select at least one record to export using the checkboxes.");
-           // Note: Removed quotes (") to prevent systems from importing literal quotes.
+           // Note: Generating 1 row per inventory barcode so your backend system can read it!
            let csv = "Date Time,Barcode,To\n";
            checked.forEach(cb => {
-               const rec = invFinalRecords.find(r => r.id == cb.value);
+               const rec = invFinalRecords.find(r => String(r.id) === String(cb.value));
                if(rec) {
-                   const barcodesJoined = rec.items.map(i => i.barcode).join('; ');
-                   csv += `${rec.t},${barcodesJoined},${rec.to}\n`;
+                   // Loop through the items and give EACH item its own dedicated line
+                   rec.items.forEach(item => {
+                       csv += `${rec.t},${item.barcode},${rec.to}\n`;
+                   });
                }
            });
            downloadCSV(csv, "Inventory_Selected_Report.csv");
        }
-       // --- Database Import ---
+       // --- Databases ---
        function importExcel(e, type) {
            const reader = new FileReader();
            reader.onload = (event) => {
