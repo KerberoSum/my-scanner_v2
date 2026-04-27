@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Hub Pro - v6.5</title>
+<title>Scanner Hub Pro - v6.6 (Cam-Fix)</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -141,23 +141,51 @@
            renderVal();
            lucide.createIcons();
        });
-       function openMode(id) {
+       // HARD RESET FUNCTION
+       async function clearScanner() {
+           if (scanner) {
+               try {
+                   await scanner.stop();
+                   await scanner.clear();
+               } catch (e) { console.log("Stop error (safe to ignore):", e); }
+               scanner = null;
+           }
+           // Clear inner HTML to ensure no ghost video elements
+           const containers = ['val-reader', 'inv-reader'];
+           containers.forEach(id => {
+               const el = document.getElementById(id);
+               if (el) el.innerHTML = '';
+           });
+       }
+       async function openMode(id) {
+           await clearScanner();
            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
            document.getElementById(id).classList.add('active');
            activeType = (id === 'page-validator') ? 'val' : 'inv';
            lucide.createIcons();
        }
        async function stopAndHome() {
-           if(scanner) { try { await scanner.stop(); } catch(e) {} scanner = null; }
+           await clearScanner();
            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
            document.getElementById('page-home').classList.add('active');
            lucide.createIcons();
        }
        async function startScanner(type) {
            activeType = type;
-           if (scanner) { try { await scanner.stop(); } catch(e) {} }
-           scanner = new Html5Qrcode(`${type}-reader`);
-           await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 240, height: 80 } }, (text) => onScanSuccess(text));
+           await clearScanner();
+           // 100ms delay to allow hardware release
+           setTimeout(async () => {
+               try {
+                   scanner = new Html5Qrcode(`${type}-reader`);
+                   await scanner.start(
+                       { facingMode: "environment" },
+                       { fps: 15, qrbox: { width: 240, height: 80 }, aspectRatio: 1.0 },
+                       onScanSuccess
+                   );
+               } catch (err) {
+                   alert("Camera Error: " + err);
+               }
+           }, 100);
        }
        function onScanSuccess(text) {
            if (Date.now() - lastScanTime < 1500) return;
@@ -253,7 +281,7 @@
            lucide.createIcons();
        }
        function bulkDelete() {
-           if(confirm("Delete ALL selected sessions? This cannot be undone.")) {
+           if(confirm("Delete ALL selected?")) {
                const checkedIds = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
                savedRecords = savedRecords.filter(r => !checkedIds.includes(String(r.id)));
                localStorage.setItem('invRec', JSON.stringify(savedRecords));
@@ -273,7 +301,7 @@
        function selectAll(v) { document.querySelectorAll('.export-check').forEach(c => c.checked = v); }
        function processExport() {
            const checkedIds = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
-           if(checkedIds.length === 0) return alert("Please select records to export.");
+           if(checkedIds.length === 0) return alert("Select records.");
            let csv = "Date Time,Barcode,To\n";
            savedRecords.forEach(r => {
                if(checkedIds.includes(String(r.id))) {
@@ -282,7 +310,6 @@
                }
            });
            downloadCSV(csv, "Inventory");
-           // AUTO DELETE EXPORTED RECORDS
            savedRecords = savedRecords.filter(r => !checkedIds.includes(String(r.id)));
            localStorage.setItem('invRec', JSON.stringify(savedRecords));
            document.getElementById('saved-count').innerText = savedRecords.length;
