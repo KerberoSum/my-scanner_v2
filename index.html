@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Hub Pro - v6.0</title>
+<title>Scanner Hub Pro - v6.1</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -15,14 +15,13 @@
        .page.active { display: flex; }
        #page-home { justify-content: center; align-items: center; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; text-align: center; }
        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; width: 100%; max-width: 400px; }
-       .menu-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px 10px; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); }
-       .menu-card:active { transform: scale(0.95); }
+       .menu-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px 10px; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); text-align: center; }
        .back-bar { background: white; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #e2e8f0; color: var(--dark); z-index: 100; }
-       .scanner-container { position: relative; height: 30vh; width: 100%; background: #000; overflow: hidden; flex-shrink: 0; }
-       #inv-reader { width: 100% !important; height: 100% !important; }
+       .scanner-container { position: relative; height: 25vh; width: 100%; background: #000; overflow: hidden; flex-shrink: 0; }
+       .reader-div { width: 100% !important; height: 100% !important; }
        .viewfinder-box {
            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-           width: 260px; height: 100px;
+           width: 240px; height: 80px;
            border: 2px solid rgba(255,255,255,0.3); border-radius: 12px;
            z-index: 50; pointer-events: none;
        }
@@ -37,12 +36,14 @@
        .btn-primary { background: var(--primary); color: white; }
        .btn-success { background: var(--success); color: white; }
        .btn-outline { background: white; border: 1px solid #e2e8f0; color: var(--dark); }
-       .session-header { background: var(--dark); color: white; padding: 10px; border-radius: 10px; margin-bottom: 10px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+       .input-group { display: flex; gap: 8px; margin-bottom: 10px; background: white; padding: 6px; border-radius: 10px; border: 1px solid #e2e8f0; }
+       .input-group input { flex-grow: 1; border: none; padding: 8px; outline: none; font-size: 0.9rem; }
+       .btn-submit { background: var(--dark); color: white; border: none; border-radius: 6px; padding: 0 12px; font-weight: bold; }
+       .session-header { background: var(--dark); color: white; padding: 10px; border-radius: 10px; margin-bottom: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; }
        .history-list { flex-grow: 1; overflow-y: auto; padding-bottom: 10px; }
        .scan-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: white; border-radius: 10px; margin-bottom: 6px; border-left: 5px solid var(--primary); }
-       /* Export Modal Overlay */
-       #export-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; display: none; flex-direction: column; padding: 20px; color: white; }
-       .modal-content { background: white; color: var(--dark); border-radius: 20px; flex-grow: 1; display: flex; flex-direction: column; padding: 15px; overflow: hidden; }
+       #export-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; display: none; flex-direction: column; padding: 20px; }
+       .modal-content { background: white; border-radius: 20px; flex-grow: 1; display: flex; flex-direction: column; padding: 15px; overflow: hidden; }
        .flash-overlay { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 101; }
        .flash-active { animation: flash-anim 0.2s ease-out; }
        @keyframes flash-anim { 0% { opacity: 0.7; } 100% { opacity: 0; } }
@@ -50,65 +51,92 @@
 </head>
 <body>
 <div id="page-home" class="page active">
-<h1>Scanner Hub Pro</h1>
+<h1 style="color:white">Scanner Hub</h1>
 <div class="menu-grid">
-<div class="menu-card" onclick="switchPage('page-inventory')">
-<i data-lucide="package-search"></i><h3>Inventory</h3>
+<div class="menu-card" onclick="switchPage('page-validator')">
+<i data-lucide="shield-check" style="color:var(--primary)"></i><h3>Validator</h3>
 </div>
+<div class="menu-card" onclick="switchPage('page-inventory')">
+<i data-lucide="package-search" style="color:var(--success)"></i><h3>Inventory</h3>
+</div>
+</div>
+</div>
+<div id="page-validator" class="page">
+<div class="back-bar">
+<div onclick="stopAndHome('val')"><i data-lucide="chevron-left"></i> Validator</div>
+</div>
+<div class="scanner-container">
+<div id="val-reader" class="reader-div"></div>
+<div class="viewfinder-box"></div>
+<div id="val-flash" class="flash-overlay"></div>
+</div>
+<div class="history-container">
+<div class="action-grid">
+<button onclick="toggleScanner('val')" class="btn btn-primary"><i data-lucide="camera"></i>Start</button>
+<button onclick="document.getElementById('val-file').click()" class="btn btn-outline"><i data-lucide="file-up"></i>DB</button>
+<button onclick="valHistory=[]" class="btn btn-outline"><i data-lucide="refresh-cw"></i>Reset</button>
+</div>
+<input type="file" id="val-file" style="display:none" onchange="importExcel(event, 'val')">
+<div class="input-group">
+<input type="text" id="val-manual" placeholder="Manual Check..." onkeypress="if(event.key==='Enter') handleManual('val')">
+<button class="btn-submit" onclick="handleManual('val')">CHECK</button>
+</div>
+<div id="val-list" class="history-list"></div>
 </div>
 </div>
 <div id="page-inventory" class="page">
 <div class="back-bar">
-<div onclick="stopAndHome('inv')" style="display:flex; align-items:center;"><i data-lucide="chevron-left"></i> Back</div>
-<div>Saved Records: <span id="saved-count" style="color:var(--primary)">0</span></div>
+<div onclick="stopAndHome('inv')"><i data-lucide="chevron-left"></i> Back</div>
+<div>Saved: <span id="saved-count" style="color:var(--primary)">0</span></div>
 </div>
 <div class="scanner-container">
-<div id="inv-reader"></div>
+<div id="inv-reader" class="reader-div"></div>
 <div class="viewfinder-box"></div>
 <div id="inv-flash" class="flash-overlay"></div>
 </div>
 <div class="history-container">
 <div class="action-grid">
-<button id="inv-toggle-btn" onclick="toggleScanner('inv')" class="btn btn-primary"><i data-lucide="camera"></i><span id="inv-btn-text">Start</span></button>
-<button onclick="document.getElementById('inv-file').click()" class="btn btn-outline"><i data-lucide="database"></i>Import DB</button>
+<button onclick="toggleScanner('inv')" class="btn btn-primary"><i data-lucide="camera"></i>Start</button>
+<button onclick="document.getElementById('inv-file').click()" class="btn btn-outline"><i data-lucide="database"></i>DB</button>
 <button onclick="finishSession()" class="btn btn-success"><i data-lucide="check-circle"></i>Finish</button>
 <button onclick="openExportModal()" class="btn btn-outline"><i data-lucide="download"></i>Export</button>
 </div>
-<input type="file" id="inv-file" style="display:none" onchange="importExcel(event)">
+<input type="file" id="inv-file" style="display:none" onchange="importExcel(event, 'inv')">
 <div class="session-header">
-<div>Loc: <span id="session-loc-display" style="color:var(--success)">Wait Loc...</span></div>
-<div id="session-count-display">Items: 0</div>
+<div>LOC: <span id="sess-loc" style="color:var(--success)">Wait...</span></div>
+<div id="sess-count">Items: 0</div>
 </div>
-<div id="active-session-list" class="history-list">
+<div class="input-group">
+<input type="text" id="inv-manual" placeholder="Type Barcode..." onkeypress="if(event.key==='Enter') handleManual('inv')">
+<button class="btn-submit" onclick="handleManual('inv')">ADD</button>
 </div>
+<div id="active-session-list" class="history-list"></div>
 </div>
 </div>
 <div id="export-modal">
 <div class="modal-content">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-<h3 style="margin:0;">Select Records</h3>
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+<h3>Select for Export</h3>
 <button onclick="closeExportModal()" style="background:none; border:none;"><i data-lucide="x"></i></button>
 </div>
-<div style="display:flex; gap:10px; margin-bottom:10px;">
-<button onclick="selectAll(true)" class="btn btn-outline" style="flex:1;">Select All</button>
-<button onclick="processExport()" class="btn btn-primary" style="flex:1;">Export CSV</button>
+<div style="display:flex; gap:5px; margin-bottom:10px;">
+<button onclick="selectAll(true)" class="btn btn-outline" style="flex:1">All</button>
+<button onclick="processExport()" class="btn btn-primary" style="flex:2">Download CSV</button>
 </div>
-<div id="modal-record-list" class="history-list" style="border-top:1px solid #eee; padding-top:10px;">
-</div>
+<div id="modal-list" class="history-list" style="border-top:1px solid #ddd; padding-top:10px;"></div>
 </div>
 </div>
 <script>
-       let scanner = null;
-       let invDb = {};
-       let savedRecords = []; // All history
+       let scanner = null, activeType = null;
+       let valDb = {}, invDb = {};
+       let valHistory = [], savedRecords = [];
        let currentSession = { loc: null, items: [] };
        let lastScanTime = 0;
        window.addEventListener('load', () => {
-           const stored = localStorage.getItem('invFinalRecords');
-           if(stored) savedRecords = JSON.parse(stored);
-           const db = localStorage.getItem('invDb');
-           if(db) invDb = JSON.parse(db);
-           updateSavedCount();
+           savedRecords = JSON.parse(localStorage.getItem('invRec') || "[]");
+           invDb = JSON.parse(localStorage.getItem('invDb') || "{}");
+           valDb = JSON.parse(localStorage.getItem('valDb') || "{}");
+           document.getElementById('saved-count').innerText = savedRecords.length;
            lucide.createIcons();
        });
        function switchPage(id) {
@@ -116,137 +144,105 @@
            document.getElementById(id).classList.add('active');
            lucide.createIcons();
        }
-       async function stopAndHome() {
+       async function stopAndHome(type) {
            if(scanner) { await scanner.stop(); scanner = null; }
            switchPage('page-home');
        }
        async function toggleScanner(type) {
-           const btnText = document.getElementById(`inv-btn-text`);
+           activeType = type;
            if (scanner && scanner.getState() === 2) {
                await scanner.stop();
-               btnText.innerText = "Start";
            } else {
-               if (!scanner) scanner = new Html5Qrcode(`inv-reader`);
-               await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } }, (text) => onScanSuccess(text));
-               btnText.innerText = "Stop";
+               if (!scanner) scanner = new Html5Qrcode(`${type}-reader`);
+               await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 240, height: 80 } }, (text) => onScanSuccess(text));
            }
        }
        function onScanSuccess(text) {
            if (Date.now() - lastScanTime < 1500) return;
            lastScanTime = Date.now();
-           // Visual feedback
-           const flash = document.getElementById(`inv-flash`);
+           const flash = document.getElementById(`${activeType}-flash`);
            flash.classList.add('flash-active');
            setTimeout(() => flash.classList.remove('flash-active'), 200);
            processBarcode(text.trim());
        }
+       function handleManual(type) {
+           activeType = type;
+           const el = document.getElementById(`${type}-manual`);
+           if(!el.value) return;
+           processBarcode(el.value.trim());
+           el.value = ""; el.focus();
+       }
        function processBarcode(code) {
-           if (!currentSession.loc) {
-               currentSession.loc = code;
-               document.getElementById('session-loc-display').innerText = code;
+           if(activeType === 'val') {
+               const status = valDb[code] || "Unknown";
+               valHistory.unshift({code, status, time: new Date().toLocaleTimeString()});
+               renderVal();
            } else {
-               const itemName = invDb[code] || "Unknown Item";
-               currentSession.items.push({ barcode: code, name: itemName });
-               renderActiveSession();
+               if (!currentSession.loc) {
+                   currentSession.loc = code;
+                   document.getElementById('sess-loc').innerText = code;
+               } else {
+                   currentSession.items.push({ barcode: code, name: invDb[code] || "Unknown Item" });
+                   renderInv();
+               }
            }
        }
-       function renderActiveSession() {
+       function renderVal() {
+           document.getElementById('val-list').innerHTML = valHistory.map(i => `
+<div class="scan-item" style="border-left-color:${i.status==='Approved'?'#10b981':'#ef4444'}">
+<div><b>${i.code}</b><br><small>${i.status}</small></div>
+</div>`).join('');
+       }
+       function renderInv() {
            const list = document.getElementById('active-session-list');
-           document.getElementById('session-count-display').innerText = `Items: ${currentSession.items.length}`;
+           document.getElementById('sess-count').innerText = `Items: ${currentSession.items.length}`;
            list.innerHTML = currentSession.items.slice().reverse().map((item, revIdx) => {
                const actualIdx = currentSession.items.length - 1 - revIdx;
-               return `
-<div class="scan-item">
+               return `<div class="scan-item">
 <div><b>${item.barcode}</b><br><small>${item.name}</small></div>
-<button onclick="deleteItem(${actualIdx})" class="btn" style="color:var(--danger)"><i data-lucide="trash-2"></i></button>
-</div>
-               `;
+<button onclick="currentSession.items.splice(${actualIdx},1);renderInv();" class="btn" style="color:var(--danger)"><i data-lucide="trash-2"></i></button>
+</div>`;
            }).join('');
            lucide.createIcons();
        }
-       function deleteItem(idx) {
-           currentSession.items.splice(idx, 1);
-           renderActiveSession();
-       }
        function finishSession() {
-           if (!currentSession.loc || currentSession.items.length === 0) {
-               alert("Scan a location and at least one item first.");
-               return;
-           }
-           const now = new Date();
-           savedRecords.push({
-               id: Date.now(),
-               time: now.toLocaleString(),
-               loc: currentSession.loc,
-               items: [...currentSession.items]
-           });
-           localStorage.setItem('invFinalRecords', JSON.stringify(savedRecords));
-           // Reset for next session
+           if (!currentSession.loc || currentSession.items.length === 0) return alert("Missing data");
+           savedRecords.push({ id: Date.now(), time: new Date().toLocaleString(), loc: currentSession.loc, items: [...currentSession.items] });
+           localStorage.setItem('invRec', JSON.stringify(savedRecords));
            currentSession = { loc: null, items: [] };
-           document.getElementById('session-loc-display').innerText = "Wait Loc...";
+           document.getElementById('sess-loc').innerText = "Wait...";
            document.getElementById('active-session-list').innerHTML = "";
-           document.getElementById('session-count-display').innerText = "Items: 0";
-           updateSavedCount();
-       }
-       function updateSavedCount() {
            document.getElementById('saved-count').innerText = savedRecords.length;
        }
-       // --- Export Modal Logic ---
        function openExportModal() {
-           const list = document.getElementById('modal-record-list');
-           if (savedRecords.length === 0) {
-               list.innerHTML = "<p style='text-align:center; opacity:0.5;'>No saved records.</p>";
-           } else {
-               list.innerHTML = savedRecords.slice().reverse().map(r => `
-<div class="scan-item" style="border-left-color:#cbd5e1">
-<input type="checkbox" class="export-check" value="${r.id}" style="width:20px; height:20px;">
-<div style="flex:1; margin-left:10px;">
-<b>${r.loc}</b><br><small>${r.items.length} items - ${r.time}</small>
-</div>
-</div>
-               `).join('');
-           }
+           const list = document.getElementById('modal-list');
+           list.innerHTML = savedRecords.slice().reverse().map(r => `
+<div class="scan-item" style="border-left-color:#ccc">
+<input type="checkbox" class="export-check" value="${r.id}" style="width:18px;height:18px;">
+<div style="flex:1; margin-left:10px;"><b>${r.loc}</b><br><small>${r.items.length} items - ${r.time}</small></div>
+<button onclick="savedRecords=savedRecords.filter(x=>x.id!=${r.id});openExportModal();" style="border:none;background:none;color:red;"><i data-lucide="trash"></i></button>
+</div>`).join('');
            document.getElementById('export-modal').style.display = 'flex';
            lucide.createIcons();
        }
-       function closeExportModal() {
-           document.getElementById('export-modal').style.display = 'none';
-       }
-       function selectAll(check) {
-           document.querySelectorAll('.export-check').forEach(cb => cb.checked = check);
-       }
+       function closeExportModal() { document.getElementById('export-modal').style.display='none'; }
+       function selectAll(v) { document.querySelectorAll('.export-check').forEach(c => c.checked = v); }
        function processExport() {
-           const selectedIds = Array.from(document.querySelectorAll('.export-check:checked')).map(cb => cb.value);
-           if (selectedIds.length === 0) return alert("Select at least one record.");
-           let csv = "Timestamp,Barcode,Item Name,Location\n";
+           const checked = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
+           let csv = "Time,Barcode,Name,Location\n";
            savedRecords.forEach(r => {
-               if (selectedIds.includes(String(r.id))) {
-                   r.items.forEach(i => {
-                       csv += `"${r.time}","${i.barcode}","${i.name}","${r.loc}"\n`;
-                   });
-               }
+               if(checked.includes(String(r.id))) r.items.forEach(i => csv += `"${r.time}","${i.barcode}","${i.name}","${r.loc}"\n`);
            });
-           const blob = new Blob([csv], { type: 'text/csv' });
-           const a = document.createElement('a');
-           a.href = URL.createObjectURL(blob);
-           a.download = `Inventory_Export_${Date.now()}.csv`;
-           a.click();
-           closeExportModal();
+           const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+           a.download = `inventory.csv`; a.click();
        }
-       // --- Database Logic ---
-       function importExcel(e) {
+       function importExcel(e, type) {
            const reader = new FileReader();
            reader.onload = (ev) => {
-               const workbook = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
-               const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-               invDb = {};
-               data.forEach(r => {
-                   const barcode = String(Object.values(r)[0]).trim();
-                   const name = String(Object.values(r)[1] || "Unknown");
-                   invDb[barcode] = name;
-               });
-               localStorage.setItem('invDb', JSON.stringify(invDb));
-               alert("Database Updated!");
+               const data = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).SheetNames[0]]);
+               if(type === 'val') { valDb = {}; data.forEach(r => valDb[String(Object.values(r)[0]).trim()] = String(Object.values(r)[1] || "Unknown")); localStorage.setItem('valDb', JSON.stringify(valDb)); }
+               else { invDb = {}; data.forEach(r => invDb[String(Object.values(r)[0]).trim()] = String(Object.values(r)[1] || "Unknown"); localStorage.setItem('invDb', JSON.stringify(invDb)); }
+               alert("Database Imported");
            };
            reader.readAsArrayBuffer(e.target.files[0]);
        }
