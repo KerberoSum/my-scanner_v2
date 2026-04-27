@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Hub Pro - v5.2 Fixed</title>
+<title>Scanner Hub Pro - v6.0</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -17,13 +17,12 @@
        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; width: 100%; max-width: 400px; }
        .menu-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 25px 10px; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); }
        .menu-card:active { transform: scale(0.95); }
-       .menu-card i { margin-bottom: 10px; color: var(--primary); display: block; margin: 0 auto 10px auto; }
-       .back-bar { background: white; padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-weight: bold; border-bottom: 1px solid #e2e8f0; cursor: pointer; color: var(--dark); z-index: 100; }
-       .scanner-container { position: relative; height: 35vh; width: 100%; background: #000; overflow: hidden; flex-shrink: 0; }
-       #val-reader, #inv-reader { width: 100% !important; height: 100% !important; }
+       .back-bar { background: white; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #e2e8f0; color: var(--dark); z-index: 100; }
+       .scanner-container { position: relative; height: 30vh; width: 100%; background: #000; overflow: hidden; flex-shrink: 0; }
+       #inv-reader { width: 100% !important; height: 100% !important; }
        .viewfinder-box {
            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-           width: 280px; height: 120px;
+           width: 260px; height: 100px;
            border: 2px solid rgba(255,255,255,0.3); border-radius: 12px;
            z-index: 50; pointer-events: none;
        }
@@ -36,17 +35,14 @@
        .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
        .btn { border: none; border-radius: 10px; padding: 10px 2px; font-size: 0.7rem; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
        .btn-primary { background: var(--primary); color: white; }
-       .btn-success { background: #ecfdf5; color: var(--success); border: 1px solid #a7f3d0; }
-       .btn-danger { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+       .btn-success { background: var(--success); color: white; }
        .btn-outline { background: white; border: 1px solid #e2e8f0; color: var(--dark); }
-       .input-group { display: flex; gap: 8px; margin-bottom: 12px; background: white; padding: 8px; border-radius: 12px; flex-shrink: 0; }
-       .input-group input { flex-grow: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; outline: none; }
-       .btn-submit { background: var(--dark); color: white; border: none; border-radius: 8px; padding: 0 15px; font-weight: bold; }
+       .session-header { background: var(--dark); color: white; padding: 10px; border-radius: 10px; margin-bottom: 10px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
        .history-list { flex-grow: 1; overflow-y: auto; padding-bottom: 10px; }
-       .scan-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: white; border-radius: 12px; margin-bottom: 8px; border-left: 6px solid #cbd5e1; gap: 10px; }
-       .custom-checkbox { width: 22px; height: 22px; cursor: pointer; accent-color: var(--primary); }
-       .inv-sub-view { display: none; flex-direction: column; height: 100%; }
-       .inv-sub-view.active { display: flex; }
+       .scan-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: white; border-radius: 10px; margin-bottom: 6px; border-left: 5px solid var(--primary); }
+       /* Export Modal Overlay */
+       #export-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; display: none; flex-direction: column; padding: 20px; color: white; }
+       .modal-content { background: white; color: var(--dark); border-radius: 20px; flex-grow: 1; display: flex; flex-direction: column; padding: 15px; overflow: hidden; }
        .flash-overlay { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 101; }
        .flash-active { animation: flash-anim 0.2s ease-out; }
        @keyframes flash-anim { 0% { opacity: 0.7; } 100% { opacity: 0; } }
@@ -54,274 +50,203 @@
 </head>
 <body>
 <div id="page-home" class="page active">
-<h1 style="margin-bottom:5px;">Scanner Hub Pro</h1>
-<p style="opacity:0.7; margin-bottom:30px;">Professional Scanning Tools</p>
+<h1>Scanner Hub Pro</h1>
 <div class="menu-grid">
-<div class="menu-card" onclick="switchPage('page-validator')">
-<i data-lucide="shield-check"></i><h3>Validator</h3>
-</div>
 <div class="menu-card" onclick="switchPage('page-inventory')">
 <i data-lucide="package-search"></i><h3>Inventory</h3>
 </div>
 </div>
 </div>
-<div id="page-validator" class="page">
-<div class="back-bar" onclick="stopAndHome('val')"><i data-lucide="chevron-left"></i> Validator Mode</div>
-<div class="scanner-container">
-<div id="val-reader"></div>
-<div class="viewfinder-box"></div>
-<div id="val-flash" class="flash-overlay"></div>
-</div>
-<div class="history-container">
-<div class="action-grid">
-<button id="val-toggle-btn" onclick="toggleScanner('val')" class="btn btn-primary"><i data-lucide="camera"></i><span id="val-btn-text">Start</span></button>
-<button onclick="document.getElementById('val-file').click()" class="btn btn-success"><i data-lucide="file-up"></i>Import</button>
-<button onclick="exportValCSV()" class="btn btn-outline"><i data-lucide="download"></i>Export</button>
-<button onclick="clearValHistory()" class="btn btn-danger"><i data-lucide="trash-2"></i>Clear</button>
-</div>
-<input type="file" id="val-file" style="display:none" onchange="importExcel(event, 'val')">
-<div class="input-group">
-<input type="text" id="val-input" placeholder="Manual Input..." onkeypress="if(event.key==='Enter') handleManual('val')">
-<button class="btn-submit" onclick="handleManual('val')">OK</button>
-</div>
-<div id="val-list" class="history-list"></div>
-</div>
-</div>
 <div id="page-inventory" class="page">
-<div class="back-bar" onclick="stopAndHome('inv')"><i data-lucide="chevron-left"></i> Inventory Mode</div>
+<div class="back-bar">
+<div onclick="stopAndHome('inv')" style="display:flex; align-items:center;"><i data-lucide="chevron-left"></i> Back</div>
+<div>Saved Records: <span id="saved-count" style="color:var(--primary)">0</span></div>
+</div>
 <div class="scanner-container">
 <div id="inv-reader"></div>
 <div class="viewfinder-box"></div>
 <div id="inv-flash" class="flash-overlay"></div>
 </div>
 <div class="history-container">
-<div id="inv-view-dashboard" class="inv-sub-view active">
 <div class="action-grid">
-<button id="inv-toggle-btn" onclick="toggleScanner('inv')" class="btn btn-primary"><i data-lucide="camera"></i><span id="inv-btn-text">Start Cam</span></button>
-<button onclick="startNewScanSession()" class="btn btn-success" style="background:var(--success); color:white;"><i data-lucide="plus-circle"></i>New Loc</button>
+<button id="inv-toggle-btn" onclick="toggleScanner('inv')" class="btn btn-primary"><i data-lucide="camera"></i><span id="inv-btn-text">Start</span></button>
 <button onclick="document.getElementById('inv-file').click()" class="btn btn-outline"><i data-lucide="database"></i>Import DB</button>
-<button onclick="exportSelectedCSV()" class="btn btn-outline"><i data-lucide="download"></i>Export Sel.</button>
+<button onclick="finishSession()" class="btn btn-success"><i data-lucide="check-circle"></i>Finish</button>
+<button onclick="openExportModal()" class="btn btn-outline"><i data-lucide="download"></i>Export</button>
 </div>
-<input type="file" id="inv-file" style="display:none" onchange="importExcel(event, 'inv')">
-<div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.85rem; font-weight:bold;">
-<span>Saved Locations</span>
-<a href="#" onclick="selectAll(true)" style="color:var(--primary); text-decoration:none;">Select All</a>
+<input type="file" id="inv-file" style="display:none" onchange="importExcel(event)">
+<div class="session-header">
+<div>Loc: <span id="session-loc-display" style="color:var(--success)">Wait Loc...</span></div>
+<div id="session-count-display">Items: 0</div>
 </div>
-<div id="inv-dashboard-list" class="history-list"></div>
+<div id="active-session-list" class="history-list">
 </div>
-<div id="inv-view-scan" class="inv-sub-view">
-<div id="inv-status" style="background:var(--dark); color:white; padding:12px; border-radius:12px; text-align:center; margin-bottom:12px;">
-<div id="inv-step" style="font-size:0.7rem; opacity:0.6;">Step 1</div>
-<div id="inv-instr" style="font-weight:bold;">Scan Location Barcode</div>
-<div id="inv-loc-info" style="display:none; color:var(--primary); margin-top:5px; font-weight:800;">TO: <span id="loc-display"></span></div>
 </div>
-<div class="action-grid">
-<button onclick="cancelScanSession()" class="btn btn-danger"><i data-lucide="x-circle"></i>Cancel</button>
-<button id="inv-finish-btn" onclick="finishLoc()" class="btn btn-primary" style="background:var(--success); display:none; grid-column: span 3;"><i data-lucide="check-circle"></i>Finish & Save</button>
 </div>
-<div class="input-group">
-<input type="text" id="inv-input-scan" placeholder="Manual Type Barcode..." onkeypress="if(event.key==='Enter') handleManual('inv', 'scan')">
-<button class="btn-submit" onclick="handleManual('inv', 'scan')">OK</button>
+<div id="export-modal">
+<div class="modal-content">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+<h3 style="margin:0;">Select Records</h3>
+<button onclick="closeExportModal()" style="background:none; border:none;"><i data-lucide="x"></i></button>
 </div>
-<div id="inv-scan-list" class="history-list"></div>
+<div style="display:flex; gap:10px; margin-bottom:10px;">
+<button onclick="selectAll(true)" class="btn btn-outline" style="flex:1;">Select All</button>
+<button onclick="processExport()" class="btn btn-primary" style="flex:1;">Export CSV</button>
 </div>
-<div id="inv-view-detail" class="inv-sub-view">
-<div style="background:#e2e8f0; padding:12px; border-radius:12px; margin-bottom:12px;">
-<div id="detail-loc-name" style="font-weight:900; font-size:1.1rem; color:var(--primary);"></div>
-</div>
-<div class="action-grid">
-<button onclick="showInvSubView('dashboard')" class="btn btn-outline" style="grid-column: span 2;"><i data-lucide="arrow-left"></i>Back</button>
-<button onclick="deleteEntireRecord()" class="btn btn-danger" style="grid-column: span 2;"><i data-lucide="trash-2"></i>Delete All</button>
-</div>
-<div id="inv-detail-list" class="history-list"></div>
+<div id="modal-record-list" class="history-list" style="border-top:1px solid #eee; padding-top:10px;">
 </div>
 </div>
 </div>
 <script>
-       let scanners = { val: null, inv: null };
-       let valDb = {}, invDb = {};
-       let valHistory = [], invFinalRecords = [];
-       let invSessionItems = [], currentLoc = "", isWaitLoc = true;
-       let currentInvView = 'dashboard', activeRecordId = null, lastScanTime = 0;
-       function playBeep() {
-           try {
-               const ctx = new (window.AudioContext || window.webkitAudioContext)();
-               const osc = ctx.createOscillator();
-               const gain = ctx.createGain();
-               osc.connect(gain); gain.connect(ctx.destination);
-               osc.frequency.setValueAtTime(800, ctx.currentTime);
-               gain.gain.setValueAtTime(0.1, ctx.currentTime);
-               osc.start(); gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
-               osc.stop(ctx.currentTime + 0.1);
-           } catch (e) {}
-       }
+       let scanner = null;
+       let invDb = {};
+       let savedRecords = []; // All history
+       let currentSession = { loc: null, items: [] };
+       let lastScanTime = 0;
        window.addEventListener('load', () => {
-           loadState();
+           const stored = localStorage.getItem('invFinalRecords');
+           if(stored) savedRecords = JSON.parse(stored);
+           const db = localStorage.getItem('invDb');
+           if(db) invDb = JSON.parse(db);
+           updateSavedCount();
            lucide.createIcons();
-           renderDashboard();
        });
-       function saveState() {
-           localStorage.setItem('valHistory', JSON.stringify(valHistory));
-           localStorage.setItem('invFinalRecords', JSON.stringify(invFinalRecords));
-           localStorage.setItem('valDb', JSON.stringify(valDb));
-           localStorage.setItem('invDb', JSON.stringify(invDb));
-       }
-       function loadState() {
-           valHistory = JSON.parse(localStorage.getItem('valHistory') || "[]");
-           invFinalRecords = JSON.parse(localStorage.getItem('invFinalRecords') || "[]");
-           valDb = JSON.parse(localStorage.getItem('valDb') || "{}");
-           invDb = JSON.parse(localStorage.getItem('invDb') || "{}");
-       }
        function switchPage(id) {
            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
            document.getElementById(id).classList.add('active');
-           if(id === 'page-inventory') showInvSubView('dashboard');
            lucide.createIcons();
        }
-       function showInvSubView(viewName) {
-           currentInvView = viewName;
-           document.querySelectorAll('.inv-sub-view').forEach(el => el.classList.remove('active'));
-           document.getElementById(`inv-view-${viewName}`).classList.add('active');
-           if(viewName === 'dashboard') renderDashboard();
-           lucide.createIcons();
-       }
-       async function stopAndHome(type) {
-           if (scanners[type] && scanners[type].getState() === 2) {
-               await scanners[type].stop();
-               scanners[type] = null;
-           }
+       async function stopAndHome() {
+           if(scanner) { await scanner.stop(); scanner = null; }
            switchPage('page-home');
        }
        async function toggleScanner(type) {
-           const btnText = document.getElementById(`${type}-btn-text`);
-           if (scanners[type] && scanners[type].getState() === 2) {
-               await scanners[type].stop();
-               btnText.innerText = type === 'inv' ? "Start Cam" : "Start";
+           const btnText = document.getElementById(`inv-btn-text`);
+           if (scanner && scanner.getState() === 2) {
+               await scanner.stop();
+               btnText.innerText = "Start";
            } else {
-               if (!scanners[type]) scanners[type] = new Html5Qrcode(`${type}-reader`);
-               await scanners[type].start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 120 } }, (text) => onScanSuccess(type, text));
-               btnText.innerText = "Stop Cam";
+               if (!scanner) scanner = new Html5Qrcode(`inv-reader`);
+               await scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 100 } }, (text) => onScanSuccess(text));
+               btnText.innerText = "Stop";
            }
        }
-       function onScanSuccess(type, text) {
+       function onScanSuccess(text) {
            if (Date.now() - lastScanTime < 1500) return;
            lastScanTime = Date.now();
-           playBeep();
-           const flash = document.getElementById(`${type}-flash`);
+           // Visual feedback
+           const flash = document.getElementById(`inv-flash`);
            flash.classList.add('flash-active');
            setTimeout(() => flash.classList.remove('flash-active'), 200);
-           if(type === 'val') processVal(text); else processInv(text);
+           processBarcode(text.trim());
        }
-       function handleManual(type, context) {
-           const el = document.getElementById(context === 'scan' ? 'inv-input-scan' : (type === 'val' ? 'val-input' : 'inv-input-detail'));
-           if(!el.value) return;
-           if(type === 'val') processVal(el.value); else processInv(el.value);
-           el.value = "";
-       }
-       function processVal(code) {
-           const res = valDb[code.trim()] || {s: 'Unknown'};
-           valHistory.unshift({code, s: res.s, t: new Date().toLocaleTimeString()});
-           saveState(); renderVal();
-       }
-       function renderVal() {
-           document.getElementById('val-list').innerHTML = valHistory.map(i => `<div class="scan-item"><b>${i.code}</b><br><small>${i.s}</small></div>`).join('');
-       }
-       function processInv(text) {
-           text = text.trim();
-           if (currentInvView === 'dashboard') startNewScanSession(text);
-           else if (currentInvView === 'scan') {
-               if (isWaitLoc) {
-                   currentLoc = text; isWaitLoc = false;
-                   document.getElementById('loc-display').innerText = text;
-                   document.getElementById('inv-loc-info').style.display = "block";
-                   document.getElementById('inv-finish-btn').style.display = "inline-flex";
-                   document.getElementById('inv-instr').innerText = "Scan Inventory Items";
-               } else {
-                   invSessionItems.push({barcode: text, name: invDb[text] || "Unknown"});
-                   renderActiveScanList();
-               }
+       function processBarcode(code) {
+           if (!currentSession.loc) {
+               currentSession.loc = code;
+               document.getElementById('session-loc-display').innerText = code;
+           } else {
+               const itemName = invDb[code] || "Unknown Item";
+               currentSession.items.push({ barcode: code, name: itemName });
+               renderActiveSession();
            }
        }
-       function renderDashboard() {
-           const listEl = document.getElementById('inv-dashboard-list');
-           if(invFinalRecords.length === 0) {
-               listEl.innerHTML = `<div style="padding:20px; text-align:center; opacity:0.5;">Empty</div>`;
+       function renderActiveSession() {
+           const list = document.getElementById('active-session-list');
+           document.getElementById('session-count-display').innerText = `Items: ${currentSession.items.length}`;
+           list.innerHTML = currentSession.items.slice().reverse().map((item, revIdx) => {
+               const actualIdx = currentSession.items.length - 1 - revIdx;
+               return `
+<div class="scan-item">
+<div><b>${item.barcode}</b><br><small>${item.name}</small></div>
+<button onclick="deleteItem(${actualIdx})" class="btn" style="color:var(--danger)"><i data-lucide="trash-2"></i></button>
+</div>
+               `;
+           }).join('');
+           lucide.createIcons();
+       }
+       function deleteItem(idx) {
+           currentSession.items.splice(idx, 1);
+           renderActiveSession();
+       }
+       function finishSession() {
+           if (!currentSession.loc || currentSession.items.length === 0) {
+               alert("Scan a location and at least one item first.");
                return;
            }
-           listEl.innerHTML = invFinalRecords.slice().reverse().map(r => `
-<div class="scan-item">
-<input type="checkbox" class="export-check custom-checkbox" value="${r.id}">
-<div onclick="openDetailView('${r.id}')" style="flex-grow:1; margin-left:10px;">
-<b>${r.to}</b><br><small>${r.items.length} items | ${r.t}</small>
-</div>
-<i data-lucide="chevron-right"></i>
-</div>
-           `).join('');
-           lucide.createIcons();
-       }
-       function startNewScanSession(autoLoc) {
-           invSessionItems = []; isWaitLoc = true;
-           document.getElementById('inv-loc-info').style.display = "none";
-           document.getElementById('inv-finish-btn').style.display = "none";
-           document.getElementById('inv-scan-list').innerHTML = "";
-           showInvSubView('scan');
-           if(autoLoc) processInv(autoLoc);
-       }
-       function renderActiveScanList() {
-           document.getElementById('inv-scan-list').innerHTML = invSessionItems.slice().reverse().map((i, idx) => `
-<div class="scan-item">
-<div><b>${i.barcode}</b></div>
-<button onclick="invSessionItems.splice(${invSessionItems.length-1-idx}, 1); renderActiveScanList();" class="btn btn-danger" style="padding:5px;"><i data-lucide="x"></i></button>
-</div>`).join('');
-           lucide.createIcons();
-       }
-       function finishLoc() {
-           if(invSessionItems.length === 0) return;
-           const d = new Date();
-           invFinalRecords.push({
-               id: 'id' + Date.now(),
-               t: `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`,
-               to: currentLoc,
-               items: [...invSessionItems]
+           const now = new Date();
+           savedRecords.push({
+               id: Date.now(),
+               time: now.toLocaleString(),
+               loc: currentSession.loc,
+               items: [...currentSession.items]
            });
-           saveState();
-           showInvSubView('dashboard');
+           localStorage.setItem('invFinalRecords', JSON.stringify(savedRecords));
+           // Reset for next session
+           currentSession = { loc: null, items: [] };
+           document.getElementById('session-loc-display').innerText = "Wait Loc...";
+           document.getElementById('active-session-list').innerHTML = "";
+           document.getElementById('session-count-display').innerText = "Items: 0";
+           updateSavedCount();
        }
-       function cancelScanSession() { if(confirm("Discard?")) showInvSubView('dashboard'); }
-       function openDetailView(id) {
-           activeRecordId = id;
-           const rec = invFinalRecords.find(r => r.id === id);
-           document.getElementById('detail-loc-name').innerText = rec.to;
-           document.getElementById('inv-detail-list').innerHTML = rec.items.map(i => `<div class="scan-item"><b>${i.barcode}</b></div>`).join('');
-           showInvSubView('detail');
+       function updateSavedCount() {
+           document.getElementById('saved-count').innerText = savedRecords.length;
        }
-       function deleteEntireRecord() {
-           invFinalRecords = invFinalRecords.filter(r => r.id !== activeRecordId);
-           saveState(); showInvSubView('dashboard');
+       // --- Export Modal Logic ---
+       function openExportModal() {
+           const list = document.getElementById('modal-record-list');
+           if (savedRecords.length === 0) {
+               list.innerHTML = "<p style='text-align:center; opacity:0.5;'>No saved records.</p>";
+           } else {
+               list.innerHTML = savedRecords.slice().reverse().map(r => `
+<div class="scan-item" style="border-left-color:#cbd5e1">
+<input type="checkbox" class="export-check" value="${r.id}" style="width:20px; height:20px;">
+<div style="flex:1; margin-left:10px;">
+<b>${r.loc}</b><br><small>${r.items.length} items - ${r.time}</small>
+</div>
+</div>
+               `).join('');
+           }
+           document.getElementById('export-modal').style.display = 'flex';
+           lucide.createIcons();
        }
-       function exportSelectedCSV() {
-           const checked = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
-           if(checked.length === 0) return alert("Select records");
-           let csv = "Time,Barcode,Location\n";
-           invFinalRecords.forEach(r => {
-               if(checked.includes(r.id)) {
-                   r.items.forEach(i => csv += `${r.t},${i.barcode},${r.to}\n`);
+       function closeExportModal() {
+           document.getElementById('export-modal').style.display = 'none';
+       }
+       function selectAll(check) {
+           document.querySelectorAll('.export-check').forEach(cb => cb.checked = check);
+       }
+       function processExport() {
+           const selectedIds = Array.from(document.querySelectorAll('.export-check:checked')).map(cb => cb.value);
+           if (selectedIds.length === 0) return alert("Select at least one record.");
+           let csv = "Timestamp,Barcode,Item Name,Location\n";
+           savedRecords.forEach(r => {
+               if (selectedIds.includes(String(r.id))) {
+                   r.items.forEach(i => {
+                       csv += `"${r.time}","${i.barcode}","${i.name}","${r.loc}"\n`;
+                   });
                }
            });
-           const blob = new Blob([csv], {type:'text/csv'});
+           const blob = new Blob([csv], { type: 'text/csv' });
            const a = document.createElement('a');
            a.href = URL.createObjectURL(blob);
-           a.download = "inventory.csv";
+           a.download = `Inventory_Export_${Date.now()}.csv`;
            a.click();
+           closeExportModal();
        }
-       function selectAll(val) { document.querySelectorAll('.export-check').forEach(c => c.checked = val); }
-       function importExcel(e, type) {
+       // --- Database Logic ---
+       function importExcel(e) {
            const reader = new FileReader();
            reader.onload = (ev) => {
-               const data = XLSX.utils.sheet_to_json(XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).SheetNames[0]]);
-               if(type === 'val') { valDb = {}; data.forEach(r => valDb[Object.values(r)[0]] = {s: Object.values(r)[1]}); }
-               else { invDb = {}; data.forEach(r => invDb[Object.values(r)[0]] = Object.values(r)[1]); }
-               saveState(); alert("Imported");
+               const workbook = XLSX.read(new Uint8Array(ev.target.result), {type:'array'});
+               const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+               invDb = {};
+               data.forEach(r => {
+                   const barcode = String(Object.values(r)[0]).trim();
+                   const name = String(Object.values(r)[1] || "Unknown");
+                   invDb[barcode] = name;
+               });
+               localStorage.setItem('invDb', JSON.stringify(invDb));
+               alert("Database Updated!");
            };
            reader.readAsArrayBuffer(e.target.files[0]);
        }
