@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Hub Pro - v6.8 (Buffer-Fix)</title>
+<title>Scanner Hub Pro - v6.9 (Core Engine Reset)</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -127,8 +127,7 @@
        let valDb = {}, invDb = {};
        let valHistory = [], savedRecords = [];
        let currentSession = { loc: null, items: [] };
-       let lastScanTime = 0;
-       let lastScanCode = "";
+       let isProcessing = false;
        function formatDate(date) {
            const d = new Date(date);
            return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
@@ -142,19 +141,20 @@
            renderVal();
            lucide.createIcons();
        });
+       // REBUILT CLEAR FUNCTION
        async function clearScanner() {
            if (scanner) {
                try {
                    await scanner.stop();
                    await scanner.clear();
-               } catch (e) { }
+               } catch (e) { console.warn("Clean stop ignored."); }
                scanner = null;
            }
            ['val-reader', 'inv-reader'].forEach(id => {
                const el = document.getElementById(id);
-               if (el) el.innerHTML = '';
+               if (el) el.innerHTML = ''; // Force browser to drop video elements
            });
-           lastScanCode = "";
+           isProcessing = false;
        }
        async function openMode(id) {
            await clearScanner();
@@ -172,34 +172,37 @@
        async function startScanner(type) {
            activeType = type;
            await clearScanner();
+           // Increased delay to 300ms to allow mobile OS to fully release camera resource
            setTimeout(async () => {
                try {
-                   scanner = new Html5Qrcode(`${type}-reader`, { willReadFrequently: true });
+                   scanner = new Html5Qrcode(`${type}-reader`, { verbose: false });
                    const config = {
-                       fps: 15,
+                       fps: 10, // Lowered slightly to prevent buffer overwhelm
                        qrbox: { width: 240, height: 80 },
-                       videoConstraints: { facingMode: "environment" }
+                       // Raw constraints to avoid yellow/grey filters
+                       videoConstraints: {
+                           facingMode: "environment",
+                           aspectRatio: { ideal: 1.0 }
+                       }
                    };
                    await scanner.start({ facingMode: "environment" }, config, onScanSuccess);
                } catch (err) {
-                   alert("Camera Access Error.");
+                   alert("Camera Lock Error. Please reload page.");
                }
-           }, 150);
+           }, 300);
        }
        function onScanSuccess(text) {
+           if (isProcessing) return;
+           isProcessing = true;
            const code = text.trim();
-           // Buffer Protection Logic
-           if (Date.now() - lastScanTime < 1500) return;
-           // Hard pause to flush engine state
-           if(scanner) scanner.pause(true);
-           lastScanTime = Date.now();
            const flash = document.getElementById(`${activeType}-flash`);
            flash.classList.add('flash-active');
+           processBarcode(code);
+           // Cooldown before allowing next scan to prevent "stuck" results
            setTimeout(() => {
                flash.classList.remove('flash-active');
-               if(scanner) scanner.resume(); // Resume only after delay
-           }, 500);
-           processBarcode(code);
+               isProcessing = false;
+           }, 1200);
        }
        function handleManual(type) {
            const el = document.getElementById(`${type}-manual`);
