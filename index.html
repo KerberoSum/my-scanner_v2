@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Hub Pro - v6.3</title>
+<title>Scanner Hub Pro - v6.4</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -80,7 +80,7 @@
 <div id="page-inventory" class="page">
 <div class="back-bar">
 <div onclick="stopAndHome()"><i data-lucide="chevron-left"></i> Back</div>
-<div>Saved Sessions: <span id="saved-count" style="color:var(--primary)">0</span></div>
+<div>Saved: <span id="saved-count" style="color:var(--primary)">0</span></div>
 </div>
 <div class="scanner-container">
 <div id="inv-reader" class="reader-div"></div>
@@ -109,12 +109,12 @@
 <div id="export-modal">
 <div class="modal-content">
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-<h3>Records</h3>
+<h3>Select Sessions</h3>
 <button onclick="closeExportModal()" style="background:none; border:none;"><i data-lucide="x"></i></button>
 </div>
 <div style="display:flex; gap:5px; margin-bottom:10px;">
 <button onclick="selectAll(true)" class="btn btn-outline" style="flex:1">All</button>
-<button onclick="processExport()" class="btn btn-primary" style="flex:2">Export Selected</button>
+<button onclick="processExport()" class="btn btn-primary" style="flex:2">Download CSV</button>
 </div>
 <div id="modal-list" class="history-list" style="border-top:1px solid #ddd; padding-top:10px;"></div>
 </div>
@@ -126,6 +126,11 @@
        let valHistory = [], savedRecords = [];
        let currentSession = { loc: null, items: [] };
        let lastScanTime = 0;
+       // Force d/m/yyyy h:m:s format
+       function formatDate(date) {
+           const d = new Date(date);
+           return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
+       }
        window.addEventListener('load', () => {
            savedRecords = JSON.parse(localStorage.getItem('invRec') || "[]");
            valHistory = JSON.parse(localStorage.getItem('valHis') || "[]");
@@ -170,7 +175,7 @@
        function processBarcode(code) {
            if(activeType === 'val') {
                const info = valDb[code] || {b: "Not Found", c: "", d: ""};
-               valHistory.unshift({code, b: info.b, c: info.c, d: info.d, time: new Date().toLocaleTimeString()});
+               valHistory.unshift({code, b: info.b, c: info.c, d: info.d, time: new Date()});
                localStorage.setItem('valHis', JSON.stringify(valHistory));
                renderVal();
            } else {
@@ -195,17 +200,15 @@
            lucide.createIcons();
        }
        function confirmClearVal() {
-           if(confirm("Are you sure you want to delete ALL validator records?")) {
-               valHistory = [];
-               localStorage.setItem('valHis', JSON.stringify(valHistory));
-               renderVal();
+           if(confirm("Delete ALL validator records?")) {
+               valHistory = []; localStorage.setItem('valHis', "[]"); renderVal();
            }
        }
        function exportValCSV() {
-           if(valHistory.length === 0) return alert("Nothing to export");
-           let csv = "Time,Barcode,Col B,Col C,Col D\n";
-           valHistory.forEach(i => csv += `"${i.time}","${i.code}","${i.b}","${i.c}","${i.d}"\n`);
-           downloadCSV(csv, "Validator_Export");
+           if(valHistory.length === 0) return alert("Empty");
+           let csv = "Date Time,Barcode,Col B,Col C,Col D\n";
+           valHistory.forEach(i => csv += `"${formatDate(i.time)}","${i.code}","${i.b}","${i.c}","${i.d}"\n`);
+           downloadCSV(csv, "Validator");
        }
        function renderInv() {
            const list = document.getElementById('active-session-list');
@@ -221,11 +224,12 @@
        }
        function finishSession() {
            if (!currentSession.loc || currentSession.items.length === 0) return alert("Need Loc + Items");
-           savedRecords.push({ id: Date.now(), time: new Date().toLocaleString(), loc: currentSession.loc, items: [...currentSession.items] });
+           savedRecords.push({ id: Date.now(), time: new Date(), loc: currentSession.loc, items: [...currentSession.items] });
            localStorage.setItem('invRec', JSON.stringify(savedRecords));
            currentSession = { loc: null, items: [] };
            document.getElementById('sess-loc').innerText = "Wait...";
            document.getElementById('active-session-list').innerHTML = "";
+           document.getElementById('sess-count').innerText = "Items: 0";
            document.getElementById('saved-count').innerText = savedRecords.length;
            alert("Saved!");
        }
@@ -234,14 +238,14 @@
            list.innerHTML = savedRecords.slice().reverse().map(r => `
 <div class="scan-item" style="border-left-color:#ccc">
 <input type="checkbox" class="export-check" value="${r.id}" style="width:20px;height:20px;">
-<div style="flex:1; margin-left:10px;"><b>${r.loc}</b><br><small>${r.items.length} items - ${r.time}</small></div>
+<div style="flex:1; margin-left:10px;"><b>${r.loc}</b><br><small>${r.items.length} items - ${formatDate(r.time)}</small></div>
 <button onclick="deleteRecord(${r.id})" style="border:none;background:none;color:red;"><i data-lucide="trash-2"></i></button>
 </div>`).join('');
            document.getElementById('export-modal').style.display = 'flex';
            lucide.createIcons();
        }
        function deleteRecord(id) {
-           if(confirm("Delete this session?")) {
+           if(confirm("Delete session?")) {
                savedRecords = savedRecords.filter(r => r.id !== id);
                localStorage.setItem('invRec', JSON.stringify(savedRecords));
                document.getElementById('saved-count').innerText = savedRecords.length;
@@ -251,34 +255,37 @@
        function closeExportModal() { document.getElementById('export-modal').style.display='none'; }
        function selectAll(v) { document.querySelectorAll('.export-check').forEach(c => c.checked = v); }
        function processExport() {
-           const checked = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
-           if(checked.length === 0) return;
-           let csv = "Time,Barcode,Name,Location\n";
+           const checkedIds = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
+           if(checkedIds.length === 0) return;
+           let csv = "Date Time,Barcode,To\n";
            savedRecords.forEach(r => {
-               if(checked.includes(String(r.id))) r.items.forEach(i => csv += `"${r.time}","${i.barcode}","${i.name}","${r.loc}"\n`);
+               if(checkedIds.includes(String(r.id))) {
+                   // Combine all item barcodes with semicolon
+                   const barcodesJoined = r.items.map(i => i.barcode).join('; ');
+                   csv += `"${formatDate(r.time)}","${barcodesJoined}","${r.loc}"\n`;
+               }
            });
-           downloadCSV(csv, "Inventory_Export");
+           downloadCSV(csv, "Inventory");
+           closeExportModal();
        }
        function downloadCSV(csv, name) {
            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-           a.download = `${name}_${Date.now()}.csv`; a.click();
+           a.download = `${name}_Export_${Date.now()}.csv`; a.click();
        }
        function importExcel(e, type) {
            const reader = new FileReader();
            reader.onload = (ev) => {
                const sheet = XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).SheetNames[0]];
-               const rows = XLSX.utils.sheet_to_json(sheet, {header: 1}); // Get raw rows for column indexing
+               const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
                let tempDb = {};
                if(type === 'val') {
-                   // Val Logic: Col A (0) is key. Return Col B (1), C (2), D (3)
                    rows.forEach(r => { if(r[0]) tempDb[String(r[0]).trim()] = {b: r[1]||"", c: r[2]||"", d: r[3]||""}; });
                    valDb = tempDb; localStorage.setItem('valDb', JSON.stringify(valDb));
                } else {
-                   // Inv Logic: Col O (14) is key. Return Col B (1)
                    rows.forEach(r => { if(r[14]) tempDb[String(r[14]).trim()] = String(r[1] || "Unknown"); });
                    invDb = tempDb; localStorage.setItem('invDb', JSON.stringify(invDb));
                }
-               alert("Database Updated Successfully");
+               alert("Database Ready");
            };
            reader.readAsArrayBuffer(e.target.files[0]);
        }
