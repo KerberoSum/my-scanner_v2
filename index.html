@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scanner Hub Pro - v6.4</title>
+<title>Scanner Hub Pro - v6.5</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -31,7 +31,7 @@
        .input-group { display: flex; gap: 8px; margin-bottom: 10px; background: white; padding: 6px; border-radius: 10px; border: 1px solid #e2e8f0; }
        .input-group input { flex-grow: 1; border: none; padding: 8px; outline: none; font-size: 0.9rem; }
        .btn-submit { background: var(--dark); color: white; border: none; border-radius: 6px; padding: 0 12px; font-weight: bold; }
-       .session-header { background: var(--dark); color: white; padding: 10px; border-radius: 10px; margin-bottom: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; }
+       .session-header { background: var(--dark); color: white; padding: 10px; border-radius: 10px; margin-bottom: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
        .history-list { flex-grow: 1; overflow-y: auto; padding-bottom: 10px; }
        .scan-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: white; border-radius: 10px; margin-bottom: 6px; border-left: 5px solid var(--primary); }
        #export-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; display: none; flex-direction: column; padding: 20px; }
@@ -97,6 +97,7 @@
 <input type="file" id="inv-file" style="display:none" onchange="importExcel(event, 'inv')">
 <div class="session-header">
 <div>LOC: <span id="sess-loc" style="color:var(--success)">Wait...</span></div>
+<button id="edit-loc-btn" onclick="editLocation()" style="background:#475569; color:white; border:none; border-radius:5px; padding:2px 8px; font-size:0.7rem; display:none;">Edit</button>
 <div id="sess-count">Items: 0</div>
 </div>
 <div class="input-group">
@@ -109,13 +110,14 @@
 <div id="export-modal">
 <div class="modal-content">
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-<h3>Select Sessions</h3>
+<h3>Sessions Management</h3>
 <button onclick="closeExportModal()" style="background:none; border:none;"><i data-lucide="x"></i></button>
 </div>
-<div style="display:flex; gap:5px; margin-bottom:10px;">
-<button onclick="selectAll(true)" class="btn btn-outline" style="flex:1">All</button>
-<button onclick="processExport()" class="btn btn-primary" style="flex:2">Download CSV</button>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
+<button onclick="selectAll(true)" class="btn btn-outline">Select All</button>
+<button onclick="bulkDelete()" class="btn btn-outline" style="color:var(--danger)">Select All To Delete</button>
 </div>
+<button onclick="processExport()" class="btn btn-primary" style="width:100%; padding:12px; margin-bottom:10px;">Export Selected & Delete</button>
 <div id="modal-list" class="history-list" style="border-top:1px solid #ddd; padding-top:10px;"></div>
 </div>
 </div>
@@ -126,7 +128,6 @@
        let valHistory = [], savedRecords = [];
        let currentSession = { loc: null, items: [] };
        let lastScanTime = 0;
-       // Force d/m/yyyy h:m:s format
        function formatDate(date) {
            const d = new Date(date);
            return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
@@ -182,11 +183,17 @@
                if (!currentSession.loc) {
                    currentSession.loc = code;
                    document.getElementById('sess-loc').innerText = code;
+                   document.getElementById('edit-loc-btn').style.display = 'block';
                } else {
                    currentSession.items.push({ barcode: code, name: invDb[code] || "Unknown" });
                    renderInv();
                }
            }
+       }
+       function editLocation() {
+           currentSession.loc = null;
+           document.getElementById('sess-loc').innerText = "Wait...";
+           document.getElementById('edit-loc-btn').style.display = 'none';
        }
        function renderVal() {
            document.getElementById('val-list').innerHTML = valHistory.map((i, idx) => `
@@ -228,6 +235,7 @@
            localStorage.setItem('invRec', JSON.stringify(savedRecords));
            currentSession = { loc: null, items: [] };
            document.getElementById('sess-loc').innerText = "Wait...";
+           document.getElementById('edit-loc-btn').style.display = 'none';
            document.getElementById('active-session-list').innerHTML = "";
            document.getElementById('sess-count').innerText = "Items: 0";
            document.getElementById('saved-count').innerText = savedRecords.length;
@@ -244,6 +252,15 @@
            document.getElementById('export-modal').style.display = 'flex';
            lucide.createIcons();
        }
+       function bulkDelete() {
+           if(confirm("Delete ALL selected sessions? This cannot be undone.")) {
+               const checkedIds = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
+               savedRecords = savedRecords.filter(r => !checkedIds.includes(String(r.id)));
+               localStorage.setItem('invRec', JSON.stringify(savedRecords));
+               document.getElementById('saved-count').innerText = savedRecords.length;
+               openExportModal();
+           }
+       }
        function deleteRecord(id) {
            if(confirm("Delete session?")) {
                savedRecords = savedRecords.filter(r => r.id !== id);
@@ -256,16 +273,19 @@
        function selectAll(v) { document.querySelectorAll('.export-check').forEach(c => c.checked = v); }
        function processExport() {
            const checkedIds = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
-           if(checkedIds.length === 0) return;
+           if(checkedIds.length === 0) return alert("Please select records to export.");
            let csv = "Date Time,Barcode,To\n";
            savedRecords.forEach(r => {
                if(checkedIds.includes(String(r.id))) {
-                   // Combine all item barcodes with semicolon
                    const barcodesJoined = r.items.map(i => i.barcode).join('; ');
                    csv += `"${formatDate(r.time)}","${barcodesJoined}","${r.loc}"\n`;
                }
            });
            downloadCSV(csv, "Inventory");
+           // AUTO DELETE EXPORTED RECORDS
+           savedRecords = savedRecords.filter(r => !checkedIds.includes(String(r.id)));
+           localStorage.setItem('invRec', JSON.stringify(savedRecords));
+           document.getElementById('saved-count').innerText = savedRecords.length;
            closeExportModal();
        }
        function downloadCSV(csv, name) {
