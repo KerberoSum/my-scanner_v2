@@ -320,7 +320,7 @@
            let csv = "Date Time,Barcode,To\n";
            savedRecords.forEach(r => {
                if(checkedIds.includes(String(r.id))) {
-                   const barcodesJoined = r.items.map(i => i.barcode).join('; ');
+                   const barcodesJoined = r.items.map(i => i.barcode).join(';');
                    csv += `"${formatDate(r.time)}","${barcodesJoined}","${r.loc}"\n`;
                }
            });
