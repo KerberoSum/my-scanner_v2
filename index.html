@@ -321,7 +321,7 @@
            savedRecords.forEach(r => {
                if(checkedIds.includes(String(r.id))) {
                    const barcodesJoined = r.items.map(i => i.barcode).join(';');
-                   csv += `"${formatDate(r.time)}","${barcodesJoined}","${r.loc}"\n`;
+                   csv += `${formatDate(r.time)},${barcodesJoined},${r.loc}\n`;
                }
            });
            downloadCSV(csv, "Inventory");
