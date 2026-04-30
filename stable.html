@@ -1,1 +1,356 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Scanner Hub Pro - v7.0 (UI Clean)</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+       :root { --primary: #2563eb; --success: #10b981; --danger: #ef4444; --bg: #f1f5f9; --dark: #0f172a; }
+       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, system-ui, sans-serif; }
+       body, html { margin: 0; padding: 0; background-color: var(--bg); height: 100vh; width: 100vw; overflow: hidden; }
+       /* HIDE THE BLUE LIBRARY BOX */
+       #val-reader div, #inv-reader div { border: none !important; }
+       #val-reader img, #inv-reader img { display: none !important; }
+       #val-reader video, #inv-reader video { object-fit: cover !important; }
+       /* Custom Viewfinder (White Corners) */
+       .page { display: none; height: 100vh; width: 100vw; flex-direction: column; overflow: hidden; }
+       .page.active { display: flex; }
+       #page-home { justify-content: center; align-items: center; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; }
+       .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; width: 100%; max-width: 400px; }
+       .menu-card { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 30px 10px; cursor: pointer; text-align: center; backdrop-filter: blur(10px); }
+       .menu-card i { margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto; }
+       .back-bar { background: white; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #e2e8f0; }
+       .scanner-container { position: relative; height: 25vh; width: 100%; background: #000; overflow: hidden; flex-shrink: 0; }
+       .reader-div { width: 100% !important; height: 100% !important; }
+       /* THE CLEAN WHITE VIEWFINDER */
+       .viewfinder-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 260px; height: 100px; z-index: 50; pointer-events: none; }
+       .viewfinder-box::before, .viewfinder-box::after { content: ''; position: absolute; width: 30px; height: 30px; border-color: white; border-style: solid; }
+       .viewfinder-box::before { top: 0; left: 0; border-width: 4px 0 0 4px; } /* Top Left L */
+       .viewfinder-box::after { top: 0; right: 0; border-width: 4px 4px 0 0; } /* Top Right L */
+       .viewfinder-bottom { position: absolute; bottom: 0; left: 0; width: 100%; height: 30px; pointer-events: none; }
+       .viewfinder-bottom::before, .viewfinder-bottom::after { content: ''; position: absolute; width: 30px; height: 30px; border-color: white; border-style: solid; }
+       .viewfinder-bottom::before { bottom: 0; left: 0; border-width: 0 0 4px 4px; } /* Bottom Left L */
+       .viewfinder-bottom::after { bottom: 0; right: 0; border-width: 0 4px 4px 0; } /* Bottom Right L */
+       .history-container { flex-grow: 1; background: var(--bg); border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 15px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
+       .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+       .btn { border: none; border-radius: 10px; padding: 10px 2px; font-size: 0.7rem; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+       .btn-primary { background: var(--primary); color: white; }
+       .btn-success { background: var(--success); color: white; }
+       .btn-outline { background: white; border: 1px solid #e2e8f0; color: var(--dark); }
+       .input-group { display: flex; gap: 8px; margin-bottom: 10px; background: white; padding: 6px; border-radius: 10px; border: 1px solid #e2e8f0; }
+       .input-group input { flex-grow: 1; border: none; padding: 8px; outline: none; font-size: 0.9rem; }
+       .btn-submit { background: var(--dark); color: white; border: none; border-radius: 6px; padding: 0 12px; font-weight: bold; }
+       .session-header { background: var(--dark); color: white; padding: 10px; border-radius: 10px; margin-bottom: 8px; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+       .history-list { flex-grow: 1; overflow-y: auto; padding-bottom: 10px; }
+       .scan-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: white; border-radius: 10px; margin-bottom: 6px; border-left: 5px solid var(--primary); }
+       #export-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; display: none; flex-direction: column; padding: 20px; }
+       .modal-content { background: white; border-radius: 20px; flex-grow: 1; display: flex; flex-direction: column; padding: 15px; overflow: hidden; }
+       .flash-overlay { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 101; }
+       .flash-active { animation: flash-anim 0.2s ease-out; }
+       @keyframes flash-anim { 0% { opacity: 0.7; } 100% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="page-home" class="page active">
+<h1>Scanner Hub</h1>
+<div class="menu-grid">
+<div class="menu-card" onclick="openMode('page-validator')">
+<i data-lucide="shield-check" color="#2563eb"></i><h3>Validator</h3>
+</div>
+<div class="menu-card" onclick="openMode('page-inventory')">
+<i data-lucide="package-search" color="#10b981"></i><h3>Inventory</h3>
+</div>
+</div>
+</div>
+<div id="page-validator" class="page">
+<div class="back-bar">
+<div onclick="stopAndHome()"><i data-lucide="chevron-left"></i> Validator</div>
+</div>
+<div class="scanner-container">
+<div id="val-reader" class="reader-div"></div>
+<div class="viewfinder-box"><div class="viewfinder-bottom"></div></div>
+<div id="val-flash" class="flash-overlay"></div>
+</div>
+<div class="history-container">
+<div class="action-grid">
+<button onclick="startScanner('val')" class="btn btn-primary"><i data-lucide="camera"></i>Start</button>
+<button onclick="document.getElementById('val-file').click()" class="btn btn-outline"><i data-lucide="file-up"></i>DB</button>
+<button onclick="exportValCSV()" class="btn btn-outline"><i data-lucide="download"></i>Export</button>
+<button onclick="confirmClearVal()" class="btn btn-outline" style="color:var(--danger)"><i data-lucide="trash-2"></i>Clear</button>
+</div>
+<input type="file" id="val-file" style="display:none" onchange="importExcel(event, 'val')">
+<div class="input-group">
+<input type="text" id="val-manual" placeholder="Manual Check..." onkeypress="if(event.key==='Enter') handleManual('val')">
+<button class="btn-submit" onclick="handleManual('val')">OK</button>
+</div>
+<div id="val-list" class="history-list"></div>
+</div>
+</div>
+<div id="page-inventory" class="page">
+<div class="back-bar">
+<div onclick="stopAndHome()"><i data-lucide="chevron-left"></i> Back</div>
+<div>Saved: <span id="saved-count" style="color:var(--primary)">0</span></div>
+</div>
+<div class="scanner-container">
+<div id="inv-reader" class="reader-div"></div>
+<div class="viewfinder-box"><div class="viewfinder-bottom"></div></div>
+<div id="inv-flash" class="flash-overlay"></div>
+</div>
+<div class="history-container">
+<div class="action-grid">
+<button onclick="startScanner('inv')" class="btn btn-primary"><i data-lucide="camera"></i>Start</button>
+<button onclick="document.getElementById('inv-file').click()" class="btn btn-outline"><i data-lucide="database"></i>DB</button>
+<button onclick="finishSession()" class="btn btn-success"><i data-lucide="check-circle"></i>Finish</button>
+<button onclick="openExportModal()" class="btn btn-outline"><i data-lucide="download"></i>Export</button>
+</div>
+<input type="file" id="inv-file" style="display:none" onchange="importExcel(event, 'inv')">
+<div class="session-header">
+<div>LOC: <span id="sess-loc" style="color:var(--success)">Wait...</span></div>
+<button id="edit-loc-btn" onclick="editLocation()" style="background:#475569; color:white; border:none; border-radius:5px; padding:2px 8px; font-size:0.7rem; display:none;">Edit</button>
+<div id="sess-count">Items: 0</div>
+</div>
+<div class="input-group">
+<input type="text" id="inv-manual" placeholder="Type Barcode..." onkeypress="if(event.key==='Enter') handleManual('inv')">
+<button class="btn-submit" onclick="handleManual('inv')">ADD</button>
+</div>
+<div id="active-session-list" class="history-list"></div>
+</div>
+</div>
+<div id="export-modal">
+<div class="modal-content">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+<h3>Sessions Management</h3>
+<button onclick="closeExportModal()" style="background:none; border:none;"><i data-lucide="x"></i></button>
+</div>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-bottom:10px;">
+<button onclick="selectAll(true)" class="btn btn-outline">Select All</button>
+<button onclick="bulkDelete()" class="btn btn-outline" style="color:var(--danger)">Select All To Delete</button>
+</div>
+<button onclick="processExport()" class="btn btn-primary" style="width:100%; padding:12px; margin-bottom:10px;">Export Selected & Delete</button>
+<div id="modal-list" class="history-list" style="border-top:1px solid #ddd; padding-top:10px;"></div>
+</div>
+</div>
+<script>
+       let scanner = null;
+       let activeType = null;
+       let valDb = {}, invDb = {};
+       let valHistory = [], savedRecords = [];
+       let currentSession = { loc: null, items: [] };
+       let isProcessing = false;
+       function formatDate(date) {
+           const d = new Date(date);
+           return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
+       }
+       window.addEventListener('load', () => {
+           savedRecords = JSON.parse(localStorage.getItem('invRec') || "[]");
+           valHistory = JSON.parse(localStorage.getItem('valHis') || "[]");
+           invDb = JSON.parse(localStorage.getItem('invDb') || "{}");
+           valDb = JSON.parse(localStorage.getItem('valDb') || "{}");
+           document.getElementById('saved-count').innerText = savedRecords.length;
+           renderVal();
+           lucide.createIcons();
+       });
+       async function clearScanner() {
+           if (scanner) {
+               try {
+                   await scanner.stop();
+                   await scanner.clear();
+               } catch (e) { }
+               scanner = null;
+           }
+           // Nuclear Reset: Wipe all video elements
+           ['val-reader', 'inv-reader'].forEach(id => {
+               const el = document.getElementById(id);
+               if (el) el.innerHTML = '';
+           });
+           isProcessing = false;
+       }
+       async function openMode(id) {
+           await clearScanner();
+           document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+           document.getElementById(id).classList.add('active');
+           activeType = (id === 'page-validator') ? 'val' : 'inv';
+           lucide.createIcons();
+       }
+       async function stopAndHome() {
+           await clearScanner();
+           document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+           document.getElementById('page-home').classList.add('active');
+           lucide.createIcons();
+       }
+       async function startScanner(type) {
+           activeType = type;
+           await clearScanner();
+           setTimeout(async () => {
+               try {
+                   scanner = new Html5Qrcode(`${type}-reader`, { verbose: false });
+                   const config = {
+                       fps: 15,
+                       qrbox: { width: 260, height: 100 }, // Matches the custom white corners
+                       videoConstraints: { facingMode: "environment" }
+                   };
+                   await scanner.start({ facingMode: "environment" }, config, onScanSuccess);
+               } catch (err) {
+                   console.error(err);
+               }
+           }, 300);
+       }
+       function onScanSuccess(text) {
+           if (isProcessing) return;
+           isProcessing = true;
+           const code = text.trim();
+           const flash = document.getElementById(`${activeType}-flash`);
+           flash.classList.add('flash-active');
+           processBarcode(code);
+           setTimeout(() => {
+               flash.classList.remove('flash-active');
+               isProcessing = false;
+           }, 1000);
+       }
+       function handleManual(type) {
+           const el = document.getElementById(`${type}-manual`);
+           if(!el.value) return;
+           processBarcode(el.value.trim());
+           el.value = "";
+       }
+       function processBarcode(code) {
+           if(activeType === 'val') {
+               const info = valDb[code] || {b: "Not Found", c: "", d: ""};
+               valHistory.unshift({code, b: info.b, c: info.c, d: info.d, time: new Date()});
+               localStorage.setItem('valHis', JSON.stringify(valHistory));
+               renderVal();
+           } else {
+               if (!currentSession.loc) {
+                   currentSession.loc = code;
+                   document.getElementById('sess-loc').innerText = code;
+                   document.getElementById('edit-loc-btn').style.display = 'block';
+               } else {
+                   currentSession.items.push({ barcode: code, name: invDb[code] || "Unknown" });
+                   renderInv();
+               }
+           }
+       }
+       function editLocation() {
+           currentSession.loc = null;
+           document.getElementById('sess-loc').innerText = "Wait...";
+           document.getElementById('edit-loc-btn').style.display = 'none';
+       }
+       function renderVal() {
+           document.getElementById('val-list').innerHTML = valHistory.map((i, idx) => `
+<div class="scan-item" style="border-left-color:${i.b === 'Not Found' ? 'red' : 'var(--primary)'}">
+<div style="flex:1">
+<b>${i.code}</b> <br>
+<small>${i.b} | ${i.c} | ${i.d}</small>
+</div>
+<button onclick="valHistory.splice(${idx},1); renderVal();" style="border:none; background:none; color:red;"><i data-lucide="trash-2"></i></button>
+</div>`).join('');
+           lucide.createIcons();
+       }
+       function confirmClearVal() {
+           if(confirm("Delete ALL validator records?")) {
+               valHistory = []; localStorage.setItem('valHis', "[]"); renderVal();
+           }
+       }
+       function exportValCSV() {
+           if(valHistory.length === 0) return alert("Empty");
+           let csv = "Date Time,Barcode,Col B,Col C,Col D\n";
+           valHistory.forEach(i => csv += `"${formatDate(i.time)}","${i.code}","${i.b}","${i.c}","${i.d}"\n`);
+           downloadCSV(csv, "Validator");
+       }
+       function renderInv() {
+           const list = document.getElementById('active-session-list');
+           document.getElementById('sess-count').innerText = `Items: ${currentSession.items.length}`;
+           list.innerHTML = currentSession.items.slice().reverse().map((item, revIdx) => {
+               const actualIdx = currentSession.items.length - 1 - revIdx;
+               return `<div class="scan-item">
+<div><b>${item.barcode}</b><br><small>${item.name}</small></div>
+<button onclick="currentSession.items.splice(${actualIdx},1);renderInv();" style="border:none; background:none; color:red;"><i data-lucide="trash-2"></i></button>
+</div>`;
+           }).join('');
+           lucide.createIcons();
+       }
+       function finishSession() {
+           if (!currentSession.loc || currentSession.items.length === 0) return alert("Need Loc + Items");
+           savedRecords.push({ id: Date.now(), time: new Date(), loc: currentSession.loc, items: [...currentSession.items] });
+           localStorage.setItem('invRec', JSON.stringify(savedRecords));
+           currentSession = { loc: null, items: [] };
+           document.getElementById('sess-loc').innerText = "Wait...";
+           document.getElementById('edit-loc-btn').style.display = 'none';
+           document.getElementById('active-session-list').innerHTML = "";
+           document.getElementById('sess-count').innerText = "Items: 0";
+           document.getElementById('saved-count').innerText = savedRecords.length;
+           alert("Saved!");
+       }
+       function openExportModal() {
+           const list = document.getElementById('modal-list');
+           list.innerHTML = savedRecords.slice().reverse().map(r => `
+<div class="scan-item" style="border-left-color:#ccc">
+<input type="checkbox" class="export-check" value="${r.id}" style="width:20px;height:20px;">
+<div style="flex:1; margin-left:10px;"><b>${r.loc}</b><br><small>${r.items.length} items - ${formatDate(r.time)}</small></div>
+<button onclick="deleteRecord(${r.id})" style="border:none;background:none;color:red;"><i data-lucide="trash-2"></i></button>
+</div>`).join('');
+           document.getElementById('export-modal').style.display = 'flex';
+           lucide.createIcons();
+       }
+       function bulkDelete() {
+           if(confirm("Delete ALL selected?")) {
+               const checkedIds = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
+               savedRecords = savedRecords.filter(r => !checkedIds.includes(String(r.id)));
+               localStorage.setItem('invRec', JSON.stringify(savedRecords));
+               document.getElementById('saved-count').innerText = savedRecords.length;
+               openExportModal();
+           }
+       }
+       function deleteRecord(id) {
+           if(confirm("Delete session?")) {
+               savedRecords = savedRecords.filter(r => r.id !== id);
+               localStorage.setItem('invRec', JSON.stringify(savedRecords));
+               document.getElementById('saved-count').innerText = savedRecords.length;
+               openExportModal();
+           }
+       }
+       function closeExportModal() { document.getElementById('export-modal').style.display='none'; }
+       function selectAll(v) { document.querySelectorAll('.export-check').forEach(c => c.checked = v); }
+       function processExport() {
+           const checkedIds = Array.from(document.querySelectorAll('.export-check:checked')).map(c => c.value);
+           if(checkedIds.length === 0) return alert("Select records.");
+           let csv = "Date Time,Barcode,To\n";
+           savedRecords.forEach(r => {
+               if(checkedIds.includes(String(r.id))) {
+                   const barcodesJoined = r.items.map(i => i.barcode).join('; ');
+                   csv += `"${formatDate(r.time)}","${barcodesJoined}","${r.loc}"\n`;
+               }
+           });
+           downloadCSV(csv, "Inventory");
+           savedRecords = savedRecords.filter(r => !checkedIds.includes(String(r.id)));
+           localStorage.setItem('invRec', JSON.stringify(savedRecords));
+           document.getElementById('saved-count').innerText = savedRecords.length;
+           closeExportModal();
+       }
+       function downloadCSV(csv, name) {
+           const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+           a.download = `${name}_Export_${Date.now()}.csv`; a.click();
+       }
+       function importExcel(e, type) {
+           const reader = new FileReader();
+           reader.onload = (ev) => {
+               const sheet = XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).Sheets[XLSX.read(new Uint8Array(ev.target.result), {type:'array'}).SheetNames[0]];
+               const rows = XLSX.utils.sheet_to_json(sheet, {header: 1});
+               let tempDb = {};
+               if(type === 'val') {
+                   rows.forEach(r => { if(r[0]) tempDb[String(r[0]).trim()] = {b: r[1]||"", c: r[2]||"", d: r[3]||""}; });
+                   valDb = tempDb; localStorage.setItem('valDb', JSON.stringify(valDb));
+               } else {
+                   rows.forEach(r => { if(r[14]) tempDb[String(r[14]).trim()] = String(r[1] || "Unknown"); });
+                   invDb = tempDb; localStorage.setItem('invDb', JSON.stringify(invDb));
+               }
+               alert("Database Ready");
+           };
+           reader.readAsArrayBuffer(e.target.files[0]);
+       }
+</script>
+</body>
+</html>
